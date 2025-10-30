@@ -1,3 +1,6 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *));
 :root {
     font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
     line-height: 1.5;
@@ -41,13 +44,22 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+    /* Colores Principales de Fitoprice (Basados en el Logo) */
+    --color-verde-esmeralda: #2E8B57;
+    /* Principal (Naturaleza/Protección) */
+    --color-verde-lima: #A2C52D;
+    /* Secundario (Fresco/Crecimiento) */
+    --color-azul-turquesa: #00BCD4;
+    /* Acento (Datos/Tracking) */
+    /* Colores de Base (Minimalismo/Legibilidad) */
+    --color-blanco: #FFFFFF;
+    /* Fondo Principal */
+    --color-gris-oscuro: #333333;
+    /* Tipografía/Texto Principal */
+    --color-gris-claro: #F5F5F5;
+    /* Fondo de secciones o tarjetas sutiles */
 }
 
-@import "tailwindcss";
-
-@import "tw-animate-css";
-
-@custom-variant dark (&:is(.dark *));
 a {
     font-weight: 500;
     color: #646cff;
@@ -56,19 +68,6 @@ a {
 
 a:hover {
     color: #535bf2;
-}
-
-body {
-    margin: 0;
-    display: flex;
-    place-items: center;
-    min-width: 320px;
-    min-height: 100vh;
-}
-
-h1 {
-    font-size: 3.2em;
-    line-height: 1.1;
 }
 
 button {
@@ -178,10 +177,10 @@ button:focus-visible {
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+    * {
+        @apply border-border outline-ring/50;
     }
-  body {
-    @apply bg-background text-foreground;
+    body {
+        @apply bg-background text-foreground;
     }
 }
