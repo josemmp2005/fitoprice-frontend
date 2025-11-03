@@ -1,13 +1,20 @@
 import Header from "../components/Header";
+import Hero from "../components/Hero";
+import Background from "../components/Background";
+import Problems from "../components/Problems";
+import LandingFooter from "../components/LandingFooter";
+
 
 export default function Landing() {
     return (
         <>
             <Header />
-            <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-card max-w-4xl mx-auto">
-                <section>
-                    <h2 className="text-2xl">Landing Page</h2>
-                </section>
+            <Background />
+            <main className="relative min-h-screen flex flex-col p-4 mx-auto max-w-7xl items-center">
+                <Hero />
+                <Problems />
+                <LandingFooter />
+
             </main>
 
         </>

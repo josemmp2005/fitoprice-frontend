@@ -1,20 +1,32 @@
-import logo from '../assets/logo.png';
+import logo from '../assets/imgs/logo.png';
+import NavigationMenu from './NavigationMenuHeader';
+import useScrollListener from '../hooks/useScrollListener'; 
+import { useNavigate } from 'react-router-dom';
+import { Button } from './ui/button';
+
+
 
 export default function Header() {
+    const isScrolled = useScrollListener(50); // El blur se activa después de 50px de scroll
+    // Clases base para el header
+    const baseClasses = "transition-all duration-300 ease-in-out";
+    const scrolledClasses = "backdrop-blur-lg";
+    const defaultClasses = "bg-transparent";
+    const navigate = useNavigate();
+
     return (
-        <header className="header flex w-full p-4 justify-between items-center max-w-4xl mx-auto fixed top-0 left-0 right-0">
-            <div className="logo-container flex items-center">
+
+        <header
+            // Se combinan las clases base con las clases condicionales
+            className={`${baseClasses} ${isScrolled ? scrolledClasses : defaultClasses} header flex w-8/10 p-2 justify-between items-center mx-auto fixed top-0 left-0 right-0 z-10 `}
+        >
+            <div className="logo-container flex items-center gap-2">
                 <img src={logo} alt="FitoPrice Logo" className='w-10 h-10' />
                 <h1 className='text-2xl'>FitoPrice</h1>
             </div>
-            <nav className="nav-links hidden md:flex gap-4">
-                <a href="/">Home</a>
-                <a href="/about">About</a>
-                <a href="/contact">Contact</a>
-                <a href="/login">Login</a>
-                <a href="/tracker">Tracker</a>
-                <a href="/comparer">Comparer</a>
-            </nav>
+            <NavigationMenu />
+            <Button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={() => navigate('/login')}>Login</Button>
         </header>
+
     )
 }
