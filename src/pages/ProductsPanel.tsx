@@ -3,7 +3,7 @@ import API_BASE_URL from "@/config/api";
 import {
     Table,
     TableBody,
-    TableCaption,
+    // TableCaption,
     TableCell,
     TableHead,
     TableHeader,
@@ -26,14 +26,21 @@ import {
     SidebarProvider,
     SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Skeleton } from "@/components/ui/skeleton";
+// import { Skeleton } from "@/components/ui/skeleton";
 
 
 
 export default function ProductsPanel() {
 
-    const [products, setProducts] = useState([]);
-      const [searchTerm, setSearchTerm] = useState<string>("");
+    interface Product {
+        id: number;
+        name: string;
+        price: number;
+        product_img_url: string;
+    }
+
+    const [products, setProducts] = useState<Product[]>([]);
+    const [searchTerm, setSearchTerm] = useState<string>("");
 
 
     useEffect(() => {
