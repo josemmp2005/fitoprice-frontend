@@ -51,7 +51,7 @@ export default function Header() {
         >
             <div className="logo-container flex items-center gap-2">
                 <img src={logo} alt="FitoPrice Logo" className='w-10 h-10' />
-                <h1 className='text-4xl'>FitoPrice</h1>
+                <h1 className='text-2xl'>FitoPrice</h1>
             </div>
             <NavigationMenu />
             <div className="flex items-center gap-3">

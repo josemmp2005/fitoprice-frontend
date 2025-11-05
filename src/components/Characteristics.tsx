@@ -28,7 +28,7 @@ export default function Characteristics() {
     return (
         <section className="py-40 px-4 md:px-8 w-full">
             <div className="text-center mb-16 space-y-4">
-                <h2 className='text-4xl md:text-5xl font-semibold'>¿Qué puedes hacer con FitoPrice?</h2>
+                <h2 className='text-4xl md:text-4xl font-semibold'>¿Qué puedes hacer con FitoPrice?</h2>
                 <p className="text-xl max-w-2xl mx-auto">Optimiza tus decisiones agrícolas con herramientas profesionales de análisis de precios</p>
             </div>
 
@@ -46,8 +46,8 @@ export default function Characteristics() {
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <h3 className="font-semibold text-2xl">{feature.title}</h3>
-                                <p className="text-xl text-muted-foreground leading-relaxed">
+                                <h3 className="font-semibold text-xl">{feature.title}</h3>
+                                <p className="text-lg text-muted-foreground leading-relaxed">
                                     {feature.description}
                                 </p>
                             </div>
