@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/sidebar";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge"
 
 interface Product {
   id: number;
@@ -112,7 +113,7 @@ export default function Dashboard() {
                 <div
                   key={product.id}
                   onClick={() => navigate(`/product?id=${product.id}`)}
-                  className="cursor-pointer bg-white dark:bg-neutral-900 rounded-xl border shadow-sm p-4 transition hover:scale-[1.02] hover:shadow-lg"
+                  className="cursor-pointer bg-gray-100 dark:bg-neutral-900 rounded-xl border shadow-sm p-4 transition hover:scale-[1.02] hover:shadow-lg"
                 >
                   <div className="aspect-square overflow-hidden rounded-lg mb-3">
                     <img
@@ -124,12 +125,16 @@ export default function Dashboard() {
                   <h2 className="text-lg font-semibold truncate">
                     {product.name}
                   </h2>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Precio actual:{" "}
-                    <span className="font-medium text-primary">
-                      {product.price} €
-                    </span>
-                  </p>
+                  <div className="flex justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500 mt-1">Desde:</p>
+                      <p className="text-lg font-medium">{product.price / 100}  €</p>
+
+                    </div>
+                    <Badge variant="default" className="h-6 w-12 self-end flex items-center justify-center bg-green-200 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-md text-xs">
+                      ↑ 2%
+                    </Badge>
+                  </div>
                 </div>
               ))}
             </div>
