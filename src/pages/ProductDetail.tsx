@@ -439,17 +439,13 @@ export default function ProductDetail() {
                                             {companiesSellers.map((companieSeller: CompanieSeller) => (
                                                 <TableRow 
                                                     key={companieSeller.id}
-                                                    className="transition-colors hover:bg-muted/50"
+                                                    className="transition-colors hover:bg-muted/50 cursor-pointer"
+                                                    onClick={() => window.open(companieSeller.product_link, '_blank', 'noopener,noreferrer')}
                                                 >
                                                     <TableCell className="font-mono font-medium">
-                                                        <a 
-                                                            href={companieSeller.product_link} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer"
-                                                            className="hover:underline text-blue-600 dark:text-blue-400"
-                                                        >
+                                                        <span className="hover:underline text-blue-600 dark:text-blue-400">
                                                             {companieSeller.name}
-                                                        </a>
+                                                        </span>
                                                     </TableCell>
                                                     <TableCell className="text-right font-semibold">
                                                         {(companieSeller.price / 100).toFixed(2)} €
