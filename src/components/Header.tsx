@@ -64,7 +64,7 @@ export default function Header() {
                 >
                     {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5 text-black dark:text-white" />}
                 </Button>
-                <Button className="bg-blue-500 dark:text-white text-xl rounded" onClick={() => navigate('/login')}>Login</Button>
+                {/* <Button className="bg-blue-500 dark:text-white text-xl rounded" onClick={() => navigate('/login')}>Login</Button> */}
             </div>
 
         </header>
