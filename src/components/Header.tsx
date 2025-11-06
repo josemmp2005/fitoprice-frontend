@@ -47,7 +47,7 @@ export default function Header() {
 
         <header
             // Se combinan las clases base con las clases condicionales
-            className={`${baseClasses} ${isScrolled ? scrolledClasses : defaultClasses} header flex w-8/10 p-2 justify-between items-center mx-auto fixed top-5 left-0 right-0 z-10 `}
+            className={`${baseClasses} ${isScrolled ? scrolledClasses : defaultClasses} header flex w-full lg:w-8/10 p-4 justify-between items-center mx-auto fixed top-0 left-0 right-0 z-10 `}
         >
             <div className="logo-container flex items-center gap-2">
                 <img src={logo} alt="FitoPrice Logo" className='w-10 h-10' />
@@ -55,7 +55,7 @@ export default function Header() {
             </div>
             <NavigationMenu />
             <div className="flex items-center gap-3">
-                <Button className="bg-blue-500 dark:text-white text-xl rounded" onClick={() => navigate('/login')}>Login</Button>
+                
                 <Button 
                     variant="outline" 
                     size="icon" 
@@ -64,6 +64,7 @@ export default function Header() {
                 >
                     {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5 text-black dark:text-white" />}
                 </Button>
+                <Button className="bg-blue-500 dark:text-white text-xl rounded" onClick={() => navigate('/login')}>Login</Button>
             </div>
 
         </header>
