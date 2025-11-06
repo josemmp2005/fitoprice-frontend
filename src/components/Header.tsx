@@ -1,7 +1,6 @@
 import logo from '../assets/imgs/logo.png';
 import NavigationMenu from './NavigationMenuHeader';
 import useScrollListener from '../hooks/useScrollListener'; 
-import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Moon, Sun } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -11,7 +10,6 @@ import { useState, useEffect } from 'react';
 export default function Header() {
     const isScrolled = useScrollListener(50); // El blur se activa después de 50px de scroll
     const [isDark, setIsDark] = useState(false);
-    const navigate = useNavigate();
     
     // Detectar el tema inicial y sincronizar con el sistema
     useEffect(() => {
