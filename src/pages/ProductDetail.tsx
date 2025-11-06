@@ -6,7 +6,6 @@ import {
     TableBody,
     TableCaption,
     TableCell,
-    TableFooter,
     TableHead,
     TableHeader,
     TableRow,
@@ -36,7 +35,6 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-
 import {
     type ChartConfig,
     ChartContainer,
@@ -51,13 +49,6 @@ interface Product {
     product_img_url: string;
 }
 
-interface Invoice {
-    invoice: string;
-    paymentStatus: string;
-    totalAmount: string;
-    paymentMethod: string;
-}
-
 interface ChartDataPoint {
     month: string;
     desktop: number;
@@ -67,6 +58,15 @@ interface PriceHistoryItem {
     id: number;
     product_id: number;
     company_id: number;
+    price: number;
+    scraped_at: string;
+}
+
+interface CompanieSeller {
+    id: number;
+    name: string;
+    website: string;
+    product_link: string;
     price: number;
     scraped_at: string;
 }
@@ -94,51 +94,31 @@ const setGraphicData = (priceHistory: PriceHistoryItem[]): ChartDataPoint[] => {
         return mockChartData;
     }
 
-    // Agrupar por mes y calcular el precio promedio
-    const groupedByMonth: { [key: string]: number[] } = {};
+    // Ordenar por fecha primero
+    const sortedHistory = [...priceHistory].sort((a, b) => 
+        new Date(a.scraped_at).getTime() - new Date(b.scraped_at).getTime()
+    );
 
-    priceHistory.forEach(item => {
+    // Crear un punto de datos por cada scraping
+    const chartData: ChartDataPoint[] = sortedHistory.map(item => {
         const date = new Date(item.scraped_at);
-        const monthName = date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+        // Formato: "DD/MM HH:mm" para mostrar día y hora
+        const dateLabel = date.toLocaleDateString('es-ES', { 
+            day: '2-digit', 
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
 
-        if (!groupedByMonth[monthName]) {
-            groupedByMonth[monthName] = [];
-        }
-
-        // Convertir el precio de centavos a euros
-        groupedByMonth[monthName].push(item.price / 100);
+        return {
+            month: dateLabel,
+            desktop: Math.round((item.price / 100) * 100) / 100 // Convertir centavos a euros
+        };
     });
 
-    // Calcular promedio por mes y crear datos del gráfico
-    const chartData: ChartDataPoint[] = Object.entries(groupedByMonth).map(([month, prices]) => ({
-        month,
-        desktop: Math.round((prices.reduce((sum, price) => sum + price, 0) / prices.length) * 100) / 100
-    }));
-
-    // Ordenar por fecha
-    return chartData.slice(-6); // Últimos 6 meses
+    // Devolver TODOS los datos para mostrarlos en el gráfico
+    return chartData;
 };
-
-const mockInvoices: Invoice[] = [
-    {
-        invoice: "INV001",
-        paymentStatus: "Pagado",
-        totalAmount: "250.00€",
-        paymentMethod: "Tarjeta de Crédito",
-    },
-    {
-        invoice: "INV002",
-        paymentStatus: "Pendiente",
-        totalAmount: "150.00€",
-        paymentMethod: "PayPal",
-    },
-    {
-        invoice: "INV003",
-        paymentStatus: "No Pagado",
-        totalAmount: "350.00€",
-        paymentMethod: "Transferencia Bancaria",
-    },
-]
 
 export default function ProductDetail() {
     const [product, setProduct] = useState<Product | null>(null);
@@ -147,6 +127,7 @@ export default function ProductDetail() {
     const [lastPrice, setLastPrice] = useState<number | null>(null);
     const [chartData, setChartData] = useState<ChartDataPoint[]>(mockChartData);
     const productId = new URLSearchParams(window.location.search).get('id') || '';
+    const [companiesSellers, setCompaniesSellers] = useState<CompanieSeller[]>([]);
 
     const getProduct = async (): Promise<void> => {
         if (!productId) {
@@ -219,6 +200,7 @@ export default function ProductDetail() {
 
             // Actualizar los datos del gráfico
             const newChartData = setGraphicData(data);
+            console.log('Chart Data:', newChartData);
             setChartData(newChartData);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
@@ -227,10 +209,34 @@ export default function ProductDetail() {
         }
     };
 
+    const getCompaniesSellers = async (): Promise<void> => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/companies/${productId}/`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: No se pudo cargar las empresas vendedoras`);
+            }
+
+            const data = await response.json();
+            console.log('Companies Sellers Data:', data);
+            setCompaniesSellers(data);
+        }
+        catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+            console.error('Error fetching companies sellers:', err);
+            setError(errorMessage);
+        }
+    };
+
     useEffect(() => {
         getProduct();
         getLastPrice();
         getHistoricalPrices();
+        getCompaniesSellers();
     }, [productId]);
 
     // Loading state
@@ -343,7 +349,7 @@ export default function ProductDetail() {
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <CardTitle>Evolución de Precios</CardTitle>
-                                            <CardDescription>Historial de los últimos 6 meses</CardDescription>
+                                            <CardDescription>Historial completo de scraping ({chartData.length} registros)</CardDescription>
                                         </div>
                                         <div className="flex items-center gap-2 text-sm font-medium text-green-600">
                                             <TrendingUp className="h-4 w-4" />
@@ -373,7 +379,9 @@ export default function ProductDetail() {
                                                 tickLine={false}
                                                 axisLine={false}
                                                 tickMargin={8}
-                                                tickFormatter={(value) => value.slice(0, 3)}
+                                                angle={-45}
+                                                textAnchor="end"
+                                                height={80}
                                                 className="text-xs"
                                             />
                                             <ChartTooltip
@@ -404,7 +412,7 @@ export default function ProductDetail() {
                                 </CardContent>
                                 <CardFooter className="flex-col items-start gap-2 text-sm border-t pt-4">
                                     <div className="text-muted-foreground leading-none">
-                                        Mostrando el historial de precios de los últimos 6 meses
+                                        Mostrando todos los datos del historial de precios
                                     </div>
                                 </CardFooter>
                             </Card>
@@ -412,8 +420,8 @@ export default function ProductDetail() {
                             {/* Invoices Table Card */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Historial de Compras</CardTitle>
-                                    <CardDescription>Registro de tus transacciones recientes</CardDescription>
+                                    <CardTitle>Proveedores</CardTitle>
+                                    <CardDescription>Registro de tus proveedores de <span className="font-semibold">{product.name}</span></CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <Table>
@@ -422,51 +430,42 @@ export default function ProductDetail() {
                                         </TableCaption>
                                         <TableHeader>
                                             <TableRow className="hover:bg-transparent">
-                                                <TableHead className="w-[120px] font-semibold">Factura</TableHead>
-                                                <TableHead className="font-semibold">Estado</TableHead>
-                                                <TableHead className="font-semibold">Método de Pago</TableHead>
+                                                <TableHead className="w-[120px] font-semibold">Empresa</TableHead>
                                                 <TableHead className="text-right font-semibold">Monto</TableHead>
+                                                <TableHead className="text-right font-semibold">Fecha</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {mockInvoices.map((invoice) => (
+                                            {companiesSellers.map((companieSeller: CompanieSeller) => (
                                                 <TableRow 
-                                                    key={invoice.invoice}
+                                                    key={companieSeller.id}
                                                     className="transition-colors hover:bg-muted/50"
                                                 >
                                                     <TableCell className="font-mono font-medium">
-                                                        {invoice.invoice}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                                                            invoice.paymentStatus === 'Pagado'
-                                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                                                : invoice.paymentStatus === 'Pendiente'
-                                                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                                                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                                                        }`}>
-                                                            {invoice.paymentStatus}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell className="text-muted-foreground">
-                                                        {invoice.paymentMethod}
+                                                        <a 
+                                                            href={companieSeller.product_link} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            className="hover:underline text-blue-600 dark:text-blue-400"
+                                                        >
+                                                            {companieSeller.name}
+                                                        </a>
                                                     </TableCell>
                                                     <TableCell className="text-right font-semibold">
-                                                        {invoice.totalAmount}
+                                                        {(companieSeller.price / 100).toFixed(2)} €
+                                                    </TableCell>
+                                                    <TableCell className="text-right text-muted-foreground">
+                                                        {new Date(companieSeller.scraped_at).toLocaleDateString('es-ES', {
+                                                            day: '2-digit',
+                                                            month: '2-digit',
+                                                            year: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
                                         </TableBody>
-                                        <TableFooter className="bg-muted/50">
-                                            <TableRow className="hover:bg-muted/50">
-                                                <TableCell colSpan={3} className="font-semibold">
-                                                    Total Acumulado
-                                                </TableCell>
-                                                <TableCell className="text-right font-bold text-lg">
-                                                    750.00€
-                                                </TableCell>
-                                            </TableRow>
-                                        </TableFooter>
                                     </Table>
                                 </CardContent>
                             </Card>
