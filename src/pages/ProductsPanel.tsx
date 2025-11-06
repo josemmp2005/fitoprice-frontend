@@ -27,6 +27,7 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar";
 // import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 
 
 
@@ -36,7 +37,9 @@ export default function ProductsPanel() {
         id: number;
         name: string;
         price: number;
+        company_name: string;
         product_img_url: string;
+        company_website: string;
     }
 
     const [products, setProducts] = useState<Product[]>([]);
@@ -63,9 +66,9 @@ export default function ProductsPanel() {
         }
     }
 
-      const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    const filteredProducts = products.filter((product) =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
 
     return (
@@ -82,7 +85,11 @@ export default function ProductsPanel() {
                         <Breadcrumb>
                             <BreadcrumbList>
                                 <BreadcrumbItem className="hidden md:block">
-                                    <BreadcrumbLink href="#">Inicio</BreadcrumbLink>
+                                    <BreadcrumbLink href="/">Inicio</BreadcrumbLink>
+                                </BreadcrumbItem>
+                                <BreadcrumbSeparator className="hidden md:block" />
+                                <BreadcrumbItem className="hidden md:block">
+                                    <BreadcrumbLink href="/admin/dashboard">Admin</BreadcrumbLink>
                                 </BreadcrumbItem>
                                 <BreadcrumbSeparator className="hidden md:block" />
                                 <BreadcrumbItem>
@@ -94,21 +101,23 @@ export default function ProductsPanel() {
 
                     <section className="p-8">
 
-                        <h1>Products Panel</h1>
+                        <h1 className="text-2xl font-bold">Products Panel</h1>
 
-                        <input
+                        <Input
                             type="text"
-                            className="border border-gray-300 dark:border-neutral-700 bg-transparent p-2 rounded-lg mb-6 w-full md:w-1/2 focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="border mt-8 border-gray-300 dark:border-neutral-700 bg-transparent p-2 rounded-lg mb-6 w-full md:w-1/2 focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder="Buscar productos..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
+                        
                         <div>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Product ID</TableHead>
                                         <TableHead>Name</TableHead>
+                                        <TableHead>Company</TableHead>
                                         <TableHead>Image URL</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -117,6 +126,7 @@ export default function ProductsPanel() {
                                         <TableRow key={product.id}>
                                             <TableCell>{product.id}</TableCell>
                                             <TableCell>{product.name}</TableCell>
+                                            <TableCell className="transition-colors hover:bg-muted/50 cursor-pointer" onClick={() => window.open(product.company_website, '_blank', 'noopener,noreferrer')}>{product.company_name}</TableCell>
                                             <TableCell><a href={product.product_img_url}>{product.product_img_url}</a></TableCell>
                                         </TableRow>
                                     ))}

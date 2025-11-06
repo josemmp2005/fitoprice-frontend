@@ -21,6 +21,7 @@ import {
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input";
 
 interface Product {
   id: number;
@@ -85,14 +86,14 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold mb-6">Dashboard de Productos </h1>
           <p className="mb-2">{filteredProducts.length} productos encontrados</p>
 
-          <input
+          <Input
             type="text"
             className="border border-gray-300 dark:border-neutral-700 bg-transparent p-2 rounded-lg mb-6 w-full md:w-1/2 focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Buscar productos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-
+          
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 [@media(min-width:2920px)]:grid-cols-8 gap-6">
               {[...Array(24)].map((_, i) => (
