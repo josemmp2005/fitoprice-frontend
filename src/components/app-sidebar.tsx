@@ -2,16 +2,15 @@
 
 import * as React from "react"
 import {
-  AudioWaveform,
-  BookOpen,
+  LayoutDashboard,
+  Building2,
+  Package,
   Bot,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
-  Map,
-  PieChart,
-  Settings2,
-  SquareTerminal,
+  Search,
+  ShoppingCart,
+  BarChart3,
+  Users,
+  Home,
 } from "lucide-react"
 
 import { NavMain } from "@/components/ui/nav-main"
@@ -25,149 +24,164 @@ import {
   SidebarHeader,
   // SidebarRail,
 } from "@/components/ui/sidebar"
+import { supabase } from "@/config/supabase"
+import type { Session } from "@supabase/supabase-js"
 
-// This is sample data.
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  teams: [
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [session, setSession] = React.useState<Session | null>(null)
+
+  React.useEffect(() => {
+    // Obtener sesión inicial
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    // Escuchar cambios en la autenticación
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Navegación para usuarios no autenticados
+  const publicNavMain = [
     {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
-  navMain: [
-    {
-      title: "Playground",
-      url: "#",
-      icon: SquareTerminal,
+      title: "Inicio",
+      url: "/",
+      icon: Home,
       isActive: true,
+    },
+    {
+      title: "Productos",
+      url: "/dashboard",
+      icon: Search,
+    },
+  ]
+
+  // Navegación completa para admins
+  const adminNavMain = [
+    {
+      title: "Dashboard",
+      url: "/admin",
+      icon: LayoutDashboard,
+      isActive: true,
+    },
+    {
+      title: "Empresas",
+      url: "/admin/companies",
+      icon: Building2,
       items: [
         {
-          title: "History",
-          url: "#",
+          title: "Ver todas",
+          url: "/admin/companies",
         },
         {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
+          title: "Agregar empresa",
+          url: "/admin/companies/new",
         },
       ],
     },
     {
-      title: "Models",
-      url: "#",
+      title: "Productos",
+      url: "/admin/products",
+      icon: Package,
+      items: [
+        {
+          title: "Ver todos",
+          url: "/admin/products",
+        },
+        {
+          title: "Agregar producto",
+          url: "/admin/products/new",
+        },
+      ],
+    },
+    {
+      title: "Scraping",
+      url: "/admin/scraping-jobs",
       icon: Bot,
       items: [
         {
-          title: "Genesis",
-          url: "#",
+          title: "Jobs activos",
+          url: "/admin/scraping-jobs",
         },
         {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
+          title: "Historial",
+          url: "/admin/scraping-jobs/history",
         },
       ],
     },
     {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
+      title: "Análisis",
+      url: "/admin/analytics",
+      icon: BarChart3,
     },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
-    },
-  ],
-}
+  ]
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const publicProjects = [
+    {
+      name: "Búsqueda de Precios",
+      url: "/dashboard",
+      icon: Search,
+    },
+    {
+      name: "Comparador",
+      url: "/compare",
+      icon: ShoppingCart,
+    },
+  ]
+
+  const adminProjects = [
+    ...publicProjects,
+    {
+      name: "Usuarios",
+      url: "/admin/users",
+      icon: Users,
+    },
+  ]
+
+  const userData = session
+    ? {
+        name: session.user.email?.split('@')[0] || "Admin User",
+        email: session.user.email || "admin@fitoprice.com",
+        avatar: session.user.user_metadata?.avatar_url || "/avatars/default.jpg",
+      }
+    : {
+        name: "Invitado",
+        email: "",
+        avatar: "/avatars/guest.jpg",
+      }
+
+  const teams = session
+    ? [
+        {
+          name: "FitoPrice Admin",
+          logo: LayoutDashboard,
+          plan: "Enterprise",
+        },
+      ]
+    : [
+        {
+          name: "FitoPrice",
+          logo: Home,
+          plan: "Free",
+        },
+      ]
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher teams={teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavMain items={session ? adminNavMain : publicNavMain} />
+        <NavProjects projects={session ? adminProjects : publicProjects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={userData} />
       </SidebarFooter>
     </Sidebar>
   )

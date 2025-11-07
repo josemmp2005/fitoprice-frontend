@@ -1,5 +1,7 @@
-import heroImg from '../assets/imgs/hero.png';
+import landingImg from '../assets/imgs/landing.png';
+import wLandingImg from '../assets/imgs/w-landing.png';
 import { CheckCircle2, TrendingUp, Bell, BarChart3 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const features = [
     {
@@ -25,6 +27,28 @@ const features = [
 ];
 
 export default function Characteristics() {
+    const [isDark, setIsDark] = useState(false);
+
+    useEffect(() => {
+        // Detectar tema inicial
+        const checkTheme = () => {
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            setIsDark(isDarkMode);
+        };
+
+        // Comprobar tema al montar
+        checkTheme();
+
+        // Observar cambios en el tema
+        const observer = new MutationObserver(checkTheme);
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+
+        return () => observer.disconnect();
+    }, []);
+
     return (
         <section className="py-40 px-4 md:px-8 w-full">
             <div className="text-center mb-16 space-y-4">
@@ -59,7 +83,7 @@ export default function Characteristics() {
                     <div className="relative group lg:[perspective:1000px]">
                         <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-primary/5 rounded-2xl blur-2xl group-hover:blur-3xl transition-all duration-300 opacity-50" />
                         <img 
-                            src={heroImg} 
+                            src={isDark ? landingImg : wLandingImg} 
                             alt="FitoPrice Platform Preview" 
                             className="relative w-full h-auto rounded-2xl shadow-2xl max-w-6xl [transform:rotateY(-15deg)] [transform-style:preserve-3d] [mask-image:linear-gradient(to_bottom,black_80%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_80%,transparent_100%)]"
                         />
