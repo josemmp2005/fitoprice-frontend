@@ -7,6 +7,7 @@ import AdminPanel from './pages/AdminPanel'
 import ProtectedRoute from './components/AdminRoute'
 import CompaniesPanel from './pages/CompaniesPanel'
 import ProductPanel from './pages/ProductsPanel'
+import ScrapingPanel from './pages/ScrapingPanel'
 import './App.css'
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
         />
         <Route path="/admin/companies" element={<CompaniesPanel />} />
         <Route path="/admin/products" element={<ProductPanel />} />
+        <Route path="/admin/scraping-jobs" element={<ScrapingPanel />} />
       </Routes>
     </BrowserRouter>
   )

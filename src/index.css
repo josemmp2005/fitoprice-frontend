@@ -14,7 +14,8 @@
     -moz-osx-font-smoothing: grayscale;
     --radius: 0.625rem;
     --background: oklch(99.405% 0.00011 271.152 / 0.699);
-    --button-background: #f0f0f0;
+    --button-background: #fcfcfc;
+    --button-foreground: #d4d4d4;
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.145 0 0);
@@ -71,7 +72,7 @@ a:hover {
 
 button {
     background-color: var(--button-background);
-    border: 1px solid #232424;
+    border: 1px solid var(--button-foreground);
     padding: 1.2rem 1.5rem;
     border-radius: 0.55rem;
     cursor: pointer;
@@ -142,6 +143,7 @@ button:focus-visible {
 .dark {
     --background: oklch(0.145 0 0);
     --button-background: #141414;
+    --button-foreground: #232424;
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.205 0 0);
     --card-foreground: oklch(0.985 0 0);
