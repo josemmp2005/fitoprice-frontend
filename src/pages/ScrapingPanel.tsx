@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import API_BASE_URL from "../config/api";
-import { useNavigate } from "react-router-dom";
-
-
+// import { useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
     Breadcrumb,
@@ -73,7 +71,7 @@ export default function CompaniesPanel() {
     const [imgSelector, setImgSelector] = useState("");
     const [linkSelector, setLinkSelector] = useState("");
     const [selectedCompany, setSelectedCompany] = useState<any>(null);
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
 
     const handleOpenSheet = (company: any, urlObj: any) => {
         setSelectedCompany(company);
@@ -84,6 +82,11 @@ export default function CompaniesPanel() {
         setImgSelector(config?.selector_image || "");
         setLinkSelector(config?.selector_link || "");
     };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedCompany) return;
+    }
 
     const getCompaniesConf = async (): Promise<void> => {
         try {
@@ -211,7 +214,7 @@ export default function CompaniesPanel() {
                                         <DialogClose asChild>
                                             <Button variant="outline">Cancel</Button>
                                         </DialogClose>
-                                        <Button type="submit">Save changes</Button>
+                                        <Button type="submit" onClick={handleSubmit}>Save changes</Button>
                                     </DialogFooter>
                                 </DialogContent>
                             </form>
