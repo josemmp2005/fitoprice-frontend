@@ -7,8 +7,7 @@ export default function NavigationMenuHeader(){
                 <li><a href="/">Home</a></li>
                 <li><a href="/about">About</a></li>
                 <li><a href="/contact">Contact</a></li>
-                <li><a href="/services">Tracker</a></li>
-                <li><a href="/comparador">Comparador</a></li>
+                <li><a href="/dashboard">Tracker</a></li>
             </ul>
         </nav>
     )

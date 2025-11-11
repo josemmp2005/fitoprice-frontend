@@ -61,31 +61,71 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 
+import { Switch } from "@/components/ui/switch";
 
 export default function CompaniesPanel() {
 
     const [scrapedCompanies, setScrapedCompanies] = useState([]);
     const [companies, setCompanies] = useState([]);
+    const [urlScrap, setUrlScrap] = useState("");
     const [nameSelector, setNameSelector] = useState("");
     const [priceSelector, setPriceSelector] = useState("");
     const [imgSelector, setImgSelector] = useState("");
     const [linkSelector, setLinkSelector] = useState("");
     const [selectedCompany, setSelectedCompany] = useState<any>(null);
+    const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
     // const navigate = useNavigate();
 
     const handleOpenSheet = (company: any, urlObj: any) => {
         setSelectedCompany(company);
-        // Cargar los valores por defecto desde scraping_config de la URL
         const config = urlObj.scraping_config;
+        setUrlScrap(config?.url || "");
         setNameSelector(config?.selector_title || "");
         setPriceSelector(config?.selector_price || "");
         setImgSelector(config?.selector_image || "");
         setLinkSelector(config?.selector_link || "");
     };
 
+    async function createNewScrepingConf() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/scraping/scraping-job`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    company_id: parseInt(selectedCompanyId),
+                    url: urlScrap,
+                    selector_title: nameSelector,
+                    selector_price: priceSelector,
+                    selector_image: imgSelector,
+                    selector_link: linkSelector,
+                }),
+            });
+            if (!response.ok) throw new Error("Error creating scraping job");
+        } catch (error) {
+            console.error("Error creating scraping job:", error);
+        }
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedCompany) return;
+        if (!selectedCompanyId) return;
+
+        // console.log(selectedCompanyId, urlScrap, nameSelector, priceSelector, imgSelector, linkSelector);
+
+        await createNewScrepingConf();
+
+        // Reset form fields
+        setSelectedCompanyId("");
+        setUrlScrap("");
+        setNameSelector("");
+        setPriceSelector("");
+        setImgSelector("");
+        setLinkSelector("");
+
+        window.location.reload();
+
     }
 
     const getCompaniesConf = async (): Promise<void> => {
@@ -161,7 +201,7 @@ export default function CompaniesPanel() {
                         <Dialog>
                             <form>
                                 <DialogTrigger asChild>
-                                    <Button variant="outline">Add Scraping</Button>
+                                    <Button variant="outline" className="mb-5">Add Scraping</Button>
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-[425px]">
                                     <DialogHeader>
@@ -173,7 +213,7 @@ export default function CompaniesPanel() {
                                     <div className="grid gap-4">
                                         <div className="grid gap-3">
                                             <Label htmlFor="name-1">Empresa</Label>
-                                            <Select>
+                                            <Select onValueChange={(value) => setSelectedCompanyId(value)} value={selectedCompanyId}>
                                                 <SelectTrigger className="w-full">
                                                     <SelectValue placeholder="Selecciona una empresa" />
                                                 </SelectTrigger>
@@ -181,7 +221,7 @@ export default function CompaniesPanel() {
                                                     <SelectGroup>
                                                         <SelectLabel>Empresas</SelectLabel>
                                                         {companies.map((company: any) => (
-                                                            <SelectItem key={company.id} value={company.id}>
+                                                            <SelectItem key={company.id} value={company.id.toString()}>
                                                                 {company.name}
                                                             </SelectItem>
                                                         ))}
@@ -190,24 +230,49 @@ export default function CompaniesPanel() {
                                             </Select>
                                         </div>
                                         <div className="grid gap-3">
-                                            <Label htmlFor="username-1">Url</Label>
-                                            <Input id="username-1" name="username" placeholder="http://example.com" />
+                                            <Label htmlFor="url-input">Url</Label>
+                                            <Input 
+                                                id="url-input" 
+                                                placeholder="http://example.com" 
+                                                value={urlScrap}
+                                                onChange={(e) => setUrlScrap(e.target.value)}
+                                            />
                                         </div>
                                         <div className="grid gap-3">
-                                            <Label htmlFor="username-1">Selector Nombre</Label>
-                                            <Input id="username-1" name="username" placeholder=".name" />
+                                            <Label htmlFor="name-selector-input">Selector Nombre</Label>
+                                            <Input 
+                                                id="name-selector-input" 
+                                                placeholder=".name" 
+                                                value={nameSelector}
+                                                onChange={(e) => setNameSelector(e.target.value)}
+                                            />
                                         </div>
                                         <div className="grid gap-3">
-                                            <Label htmlFor="username-1">Selector Precio</Label>
-                                            <Input id="username-1" name="username" placeholder=".price" />
+                                            <Label htmlFor="price-selector-input">Selector Precio</Label>
+                                            <Input 
+                                                id="price-selector-input" 
+                                                placeholder=".price" 
+                                                value={priceSelector}
+                                                onChange={(e) => setPriceSelector(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="grid gap-3">    
+                                            <Label htmlFor="img-selector-input">Selector Img</Label>
+                                            <Input 
+                                                id="img-selector-input" 
+                                                placeholder=".img" 
+                                                value={imgSelector}
+                                                onChange={(e) => setImgSelector(e.target.value)}
+                                            />
                                         </div>
                                         <div className="grid gap-3">
-                                            <Label htmlFor="username-1">Selector Img</Label>
-                                            <Input id="username-1" name="username" placeholder=".img" />
-                                        </div>
-                                        <div className="grid gap-3">
-                                            <Label htmlFor="username-1">Selector Link</Label>
-                                            <Input id="username-1" name="username" placeholder=".link" />
+                                            <Label htmlFor="link-selector-input">Selector Link</Label>
+                                            <Input 
+                                                id="link-selector-input" 
+                                                placeholder=".link" 
+                                                value={linkSelector}
+                                                onChange={(e) => setLinkSelector(e.target.value)}
+                                            />
                                         </div>
                                     </div>
                                     <DialogFooter>
@@ -318,6 +383,18 @@ export default function CompaniesPanel() {
                                                                             onChange={(e) => setLinkSelector(e.target.value)}
                                                                         />
                                                                     </div>
+                                                                    <div className="grid gap-3">
+                                                                        <Label htmlFor="active-switch">Activa</Label>
+                                                                        <Switch
+                                                                            id="active-switch"
+                                                                            checked={urlObj.active}
+                                                                            onCheckedChange={(checked) => {
+                                                                                // Aquí puedes manejar el cambio de estado
+                                                                            }}
+                                                                        />
+
+                                                                    </div>
+
                                                                 </div>
 
                                                                 <SheetFooter>
@@ -341,4 +418,6 @@ export default function CompaniesPanel() {
             </SidebarProvider>
         </>
     )
+
+
 }
