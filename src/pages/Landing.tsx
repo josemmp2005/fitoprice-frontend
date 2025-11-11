@@ -4,7 +4,8 @@ import Background from "../components/Background";
 import Problems from "../components/Problems";
 import Characteristics from "../components/Characteristics";
 import LandingFooter from "../components/LandingFooter";
-
+import LandingInfo from "../components/LandingInfo";
+import Contact from "../components/Contact";
 
 export default function Landing() {
     return (
@@ -15,6 +16,8 @@ export default function Landing() {
                 <Hero />
                 <Problems />
                 <Characteristics />
+                <LandingInfo />
+                <Contact />
                 <LandingFooter />
 
             </main>

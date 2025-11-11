@@ -15,11 +15,6 @@ const features = [
         description: "Rastrea y analiza el comportamiento de precios a lo largo del tiempo."
     },
     {
-        icon: Bell,
-        title: "Alertas Inteligentes",
-        description: "Recibe notificaciones cuando hay cambios significativos en los precios."
-    },
-    {
         icon: CheckCircle2,
         title: "Análisis Personalizado",
         description: "Accede a recomendaciones de mercado adaptadas a tus necesidades."
@@ -50,7 +45,7 @@ export default function Characteristics() {
     }, []);
 
     return (
-        <section className="py-40 px-4 md:px-8 w-full">
+        <section className="text-center mt-20 px-4 w-full">
             <div className="text-center mb-16 space-y-4">
                 <h2 className='text-4xl md:text-4xl font-semibold'>¿Qué puedes hacer con FitoPrice?</h2>
                 <p className="text-xl max-w-2xl mx-auto">Optimiza tus decisiones agrícolas con herramientas profesionales de análisis de precios</p>

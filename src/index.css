@@ -218,3 +218,9 @@ button:focus-visible {
         margin-top: 0 !important;
     }
 }
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) var(--color-background);
+    scroll-behavior: smooth;
+}
