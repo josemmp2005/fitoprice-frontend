@@ -44,10 +44,22 @@ import {
 
 // Interfaces
 interface Product {
-    id: number;
-    name: string;
-    product_img_url: string;
+        id: number;
+        name: string;
+        brand: string | null;
+        category: string | null;
+        unit: string | null;
+        created_at: string;
+        product_img_url: string;
+        price: number;
+        percentage_change: number;
+        scraped_at: string;
+        product_link: string;
+        company_id: number;
+        company_name: string;
+        company_website: string;
 }
+
 
 interface ChartDataPoint {
     month: string;
@@ -129,7 +141,7 @@ export default function ProductDetail() {
     const productId = new URLSearchParams(window.location.search).get('id') || '';
     const [companiesSellers, setCompaniesSellers] = useState<CompanieSeller[]>([]);
 
-    const getProduct = async (): Promise<void> => {
+     const getProduct = async (): Promise<void> => {
         if (!productId) {
             setError('No se proporcionó un ID de producto');
             setLoading(false);
@@ -149,8 +161,8 @@ export default function ProductDetail() {
                 throw new Error(`Error ${response.status}: No se pudo cargar el producto`);
             }
 
-            const data: Product = await response.json();
-            setProduct(data);
+            const data = await response.json();
+            setProduct(data[0] as Product);
             setError(null);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
@@ -351,10 +363,19 @@ export default function ProductDetail() {
                                             <CardTitle>Evolución de Precios</CardTitle>
                                             <CardDescription>Historial completo de scraping ({chartData.length} registros)</CardDescription>
                                         </div>
-                                        <div className="flex items-center gap-2 text-sm font-medium text-green-600">
-                                            <TrendingUp className="h-4 w-4" />
-                                            <span>+5.2%</span>
-                                        </div>
+                                        {
+                                            product.percentage_change > 0 ? (
+                                                <div className="flex items-center gap-2 text-sm font-medium text-green-600">
+                                                    <TrendingUp className="h-4 w-4" />
+                                                    <span>{product.percentage_change}%</span>
+                                                </div>
+                                            ) : product.percentage_change < 0 ? (
+                                                <div className="flex items-center gap-2 text-sm font-medium text-red-600">
+                                                    <TrendingUp className="h-4 w-4 rotate-180" />
+                                                    <span>{product.percentage_change}%</span>
+                                                </div>
+                                            ) : null
+                                        }
                                     </div>
                                 </CardHeader>
                                 <CardContent>

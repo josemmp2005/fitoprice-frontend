@@ -24,10 +24,20 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input";
 
 interface Product {
-  id: number;
-  name: string;
-  price: number;
-  product_img_url: string;
+        id: number;
+        name: string;
+        brand: string | null;
+        category: string | null;
+        unit: string | null;
+        created_at: string;
+        product_img_url: string;
+        price: number;
+        percentage_change: number;
+        scraped_at: string;
+        product_link: string;
+        company_id: number;
+        company_name: string;
+        company_website: string;
 }
 
 export default function Dashboard() {
@@ -133,9 +143,21 @@ export default function Dashboard() {
                       <p className="text-lg font-medium">{product.price / 100}  €</p>
 
                     </div>
-                    <Badge variant="default" className="h-6 w-12 self-end flex items-center justify-center bg-green-200 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-md text-xs">
-                      ↑ 2%
-                    </Badge>
+                    {
+                      product.percentage_change > 0 ? (
+                        <Badge variant="default" className="h-6 w-12 self-end flex items-center justify-center bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-md text-xs">
+                          ↓ {product.percentage_change}%
+                        </Badge>
+                      ) : product.percentage_change < 0 ? (
+                        <Badge variant="default" className="h-6 w-12 self-end flex items-center justify-center bg-green-200 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-md text-xs">
+                         ↑ {product.percentage_change}%
+                        </Badge>
+                      ) : (
+                        <Badge variant="default" className="h-6 w-12 self-end flex items-center justify-center bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-gray-200 rounded-md text-xs">
+                         = {product.percentage_change}%
+                        </Badge>
+                      )
+                    }
                   </div>
                 </div>
               ))}
