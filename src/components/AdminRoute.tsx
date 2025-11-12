@@ -13,7 +13,7 @@ export default function AdminRoute({ children }: AdminRouteProps) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) navigate("/admin/login");
+      if (!data.session) navigate("/login/admin");
       else setSession(data.session);
     });
   }, [navigate]);

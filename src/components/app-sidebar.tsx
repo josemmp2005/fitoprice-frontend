@@ -7,14 +7,14 @@ import {
   Package,
   Bot,
   Search,
-  ShoppingCart,
+  // ShoppingCart,
   BarChart3,
-  Users,
+  // Users,
   Home,
 } from "lucide-react"
 
 import { NavMain } from "@/components/ui/nav-main"
-import { NavProjects } from "@/components/ui/nav-projects"
+// import { NavProjects } from "@/components/ui/nav-projects"
 import { NavUser } from "@/components/ui/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
 import {
@@ -53,11 +53,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/",
       icon: Home,
       isActive: true,
+      items: [
+        {
+          title: "Inicio",
+          url: "/",
+        },
+      ]
     },
     {
-      title: "Productos",
+      title: "Buscar Productos",
       url: "/dashboard",
       icon: Search,
+      items: [
+        {
+          title: "Ver productos",
+          url: "/dashboard",
+        },
+      ]
     },
   ]
 
@@ -65,9 +77,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const adminNavMain = [
     {
       title: "Dashboard",
-      url: "/admin",
+      url: "/dashboard",
       icon: LayoutDashboard,
-      isActive: true,
+      items: [
+        {
+          title: "dashboard",
+          url: "/dashboard",
+        },
+      ]
     },
     {
       title: "Empresas",
@@ -77,10 +94,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {
           title: "Ver todas",
           url: "/admin/companies",
-        },
-        {
-          title: "Agregar empresa",
-          url: "/admin/companies/new",
         },
       ],
     },
@@ -93,10 +106,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           title: "Ver todos",
           url: "/admin/products",
         },
-        {
-          title: "Agregar producto",
-          url: "/admin/products/new",
-        },
       ],
     },
     {
@@ -108,40 +117,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           title: "Jobs activos",
           url: "/admin/scraping-jobs",
         },
-        {
-          title: "Historial",
-          url: "/admin/scraping-jobs/history",
-        },
       ],
     },
     {
       title: "Análisis",
       url: "/admin/analytics",
       icon: BarChart3,
+      items: [
+        {
+          title: "Ver análisis",
+          url: "/admin/dashboard",
+        },
+      ],
     },
   ]
 
-  const publicProjects = [
-    {
-      name: "Búsqueda de Precios",
-      url: "/dashboard",
-      icon: Search,
-    },
-    {
-      name: "Comparador",
-      url: "/compare",
-      icon: ShoppingCart,
-    },
-  ]
-
-  const adminProjects = [
-    ...publicProjects,
-    {
-      name: "Usuarios",
-      url: "/admin/users",
-      icon: Users,
-    },
-  ]
 
   const userData = session
     ? {
@@ -167,7 +157,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {
           name: "FitoPrice",
           logo: Home,
-          plan: "Free",
+          plan: "",
         },
       ]
 
@@ -178,7 +168,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={session ? adminNavMain : publicNavMain} />
-        <NavProjects projects={session ? adminProjects : publicProjects} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={userData} />

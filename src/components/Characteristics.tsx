@@ -1,6 +1,6 @@
 import landingImg from '../assets/imgs/landing.png';
 import wLandingImg from '../assets/imgs/w-landing.png';
-import { CheckCircle2, TrendingUp, Bell, BarChart3 } from 'lucide-react';
+import { CheckCircle2, TrendingUp, BarChart3 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const features = [
