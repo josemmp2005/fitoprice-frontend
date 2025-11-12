@@ -1,4 +1,8 @@
 
+/**
+ * Navigation menu component for the header
+ */
+
 
 export default function NavigationMenuHeader(){
     return (

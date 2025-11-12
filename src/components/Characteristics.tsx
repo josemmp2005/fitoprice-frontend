@@ -45,7 +45,7 @@ export default function Characteristics() {
     }, []);
 
     return (
-        <section className="text-center mt-20 px-4 w-full">
+        <section className="text-center mt-20 px-4 w-full" id="characteristics">
             <div className="text-center mb-16 space-y-4">
                 <h2 className='text-4xl md:text-4xl font-semibold'>¿Qué puedes hacer con FitoPrice?</h2>
                 <p className="text-xl max-w-2xl mx-auto">Optimiza tus decisiones agrícolas con herramientas profesionales de análisis de precios</p>

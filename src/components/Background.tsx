@@ -1,3 +1,8 @@
+/**
+ *  Background component that provides a layered radial gradient background from https://www.bgvault.tech/
+ *
+ */
+    
 export default function Background() {
     return (
         <>
