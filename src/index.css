@@ -70,7 +70,15 @@ a:hover {
     color: #535bf2;
 }
 
-button {
+
+/* Only apply this simple default style to native buttons that have NO class attribute.
+   This prevents global overrides of component/library buttons which render their own
+   classes and rely on their own styles. If you want a styled generic button, add a
+   custom class (for example `class="btn-default"`) or use the project's Button
+   component.
+*/
+
+button:not([class]) {
     background-color: var(--button-background);
     border: 1px solid var(--button-foreground);
     padding: 1.2rem 1.5rem;
@@ -80,12 +88,12 @@ button {
     color: var(--color);
 }
 
-button:hover {
+button:not([class]):hover {
     border-color: #646cff;
 }
 
-button:focus,
-button:focus-visible {
+button:not([class]):focus,
+button:not([class]):focus-visible {
     outline: 4px auto -webkit-focus-ring-color;
 }
 

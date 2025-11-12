@@ -61,7 +61,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 
-import { Switch } from "@/components/ui/switch";
+import { Switch } from "@/components/ui/switch"
 
 export default function CompaniesPanel() {
 
@@ -74,6 +74,9 @@ export default function CompaniesPanel() {
     const [linkSelector, setLinkSelector] = useState("");
     const [selectedCompany, setSelectedCompany] = useState<any>(null);
     const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+    // local active states per url id to make switch visually responsive for debugging
+    const [activeStates, setActiveStates] = useState<Record<string, boolean>>({});
+    const [selectedUrlId, setSelectedUrlId] = useState<string | null>(null);
     // const navigate = useNavigate();
 
     const handleOpenSheet = (company: any, urlObj: any) => {
@@ -84,6 +87,9 @@ export default function CompaniesPanel() {
         setPriceSelector(config?.selector_price || "");
         setImgSelector(config?.selector_image || "");
         setLinkSelector(config?.selector_link || "");
+        // initialize local active state for this url so switch is controlled
+        setActiveStates(prev => ({ ...prev, [String(urlObj.id)]: Boolean(urlObj.active) }));
+        setSelectedUrlId(String(urlObj.id));
     };
 
     async function createNewScrepingConf() {
@@ -126,6 +132,31 @@ export default function CompaniesPanel() {
 
         window.location.reload();
 
+    }
+
+    const handleSubmitUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedCompany || !selectedUrlId) return;
+        try {
+            const response = await fetch(`${API_BASE_URL}/scraping/scraping-job/${selectedUrlId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    url: urlScrap,
+                    selector_title: nameSelector,
+                    selector_price: priceSelector,
+                    selector_image: imgSelector,
+                    selector_link: linkSelector,
+                    active: activeStates[selectedUrlId],
+                }),
+            });
+            if (!response.ok) throw new Error("Error updating scraping config");
+            window.location.reload();
+        } catch (error) {
+            console.error("Error updating scraping config:", error);
+        }
     }
 
     const getCompaniesConf = async (): Promise<void> => {
@@ -231,45 +262,45 @@ export default function CompaniesPanel() {
                                         </div>
                                         <div className="grid gap-3">
                                             <Label htmlFor="url-input">Url</Label>
-                                            <Input 
-                                                id="url-input" 
-                                                placeholder="http://example.com" 
+                                            <Input
+                                                id="url-input"
+                                                placeholder="http://example.com"
                                                 value={urlScrap}
                                                 onChange={(e) => setUrlScrap(e.target.value)}
                                             />
                                         </div>
                                         <div className="grid gap-3">
                                             <Label htmlFor="name-selector-input">Selector Nombre</Label>
-                                            <Input 
-                                                id="name-selector-input" 
-                                                placeholder=".name" 
+                                            <Input
+                                                id="name-selector-input"
+                                                placeholder=".name"
                                                 value={nameSelector}
                                                 onChange={(e) => setNameSelector(e.target.value)}
                                             />
                                         </div>
                                         <div className="grid gap-3">
                                             <Label htmlFor="price-selector-input">Selector Precio</Label>
-                                            <Input 
-                                                id="price-selector-input" 
-                                                placeholder=".price" 
+                                            <Input
+                                                id="price-selector-input"
+                                                placeholder=".price"
                                                 value={priceSelector}
                                                 onChange={(e) => setPriceSelector(e.target.value)}
                                             />
                                         </div>
-                                        <div className="grid gap-3">    
+                                        <div className="grid gap-3">
                                             <Label htmlFor="img-selector-input">Selector Img</Label>
-                                            <Input 
-                                                id="img-selector-input" 
-                                                placeholder=".img" 
+                                            <Input
+                                                id="img-selector-input"
+                                                placeholder=".img"
                                                 value={imgSelector}
                                                 onChange={(e) => setImgSelector(e.target.value)}
                                             />
                                         </div>
                                         <div className="grid gap-3">
                                             <Label htmlFor="link-selector-input">Selector Link</Label>
-                                            <Input 
-                                                id="link-selector-input" 
-                                                placeholder=".link" 
+                                            <Input
+                                                id="link-selector-input"
+                                                placeholder=".link"
                                                 value={linkSelector}
                                                 onChange={(e) => setLinkSelector(e.target.value)}
                                             />
@@ -383,22 +414,23 @@ export default function CompaniesPanel() {
                                                                             onChange={(e) => setLinkSelector(e.target.value)}
                                                                         />
                                                                     </div>
-                                                                    <div className="grid gap-3">
-                                                                        <Label htmlFor="active-switch">Activa</Label>
+                                                                    <div className="flex items-center space-x-2">
                                                                         <Switch
-                                                                            id="active-switch"
-                                                                            checked={urlObj.active}
+                                                                            id={`active-switch-${urlObj.id}`}
+                                                                            checked={activeStates[String(urlObj.id)] ?? Boolean(urlObj.active)}
                                                                             onCheckedChange={(checked) => {
-                                                                                // Aquí puedes manejar el cambio de estado
+                                                                                // Update local controlled state and log changes
+                                                                                setActiveStates(prev => ({ ...prev, [String(urlObj.id)]: checked }));
+                                                                                console.log(`Scraping URL id=${urlObj.id} (${urlObj.url}) - previous active=`, urlObj.active, "-> new checked=", checked)
                                                                             }}
                                                                         />
-
+                                                                        <Label htmlFor={`active-switch-${urlObj.id}`}>Activa</Label>
                                                                     </div>
 
                                                                 </div>
 
                                                                 <SheetFooter>
-                                                                    <Button type="submit">Guardar cambios</Button>
+                                                                    <Button type="submit" onClick={handleSubmitUpdate}>Guardar cambios</Button>
                                                                     <SheetClose asChild>
                                                                         <Button variant="outline">Cerrar</Button>
                                                                     </SheetClose>
