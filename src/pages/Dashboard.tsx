@@ -1,8 +1,10 @@
+/**
+ * Dashboard Page Component - Displays a list of products with search functionality.
+ */
+
 import { useState, useEffect } from "react";
 import API_BASE_URL from "../config/api";
 import { useNavigate } from "react-router-dom";
-
-
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   Breadcrumb,
@@ -18,11 +20,11 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input";
 
+// Define the Product interface to type the product data
 interface Product {
         id: number;
         name: string;
@@ -41,21 +43,25 @@ interface Product {
 }
 
 export default function Dashboard() {
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [allProducts, setAllProducts] = useState<Product[]>([]); // State to hold all products
+  const [searchTerm, setSearchTerm] = useState<string>(""); // State for the search term
+  const [isLoading, setIsLoading] = useState<boolean>(true); // State to manage loading state
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Fetch all products on component mount
     getAllProducts();
   }, []);
 
+  // Function to fetch all products from the API
   const getAllProducts = async (): Promise<void> => {
     try {
+      // Indicate loading state
       setIsLoading(true);
       const response = await fetch(`${API_BASE_URL}/products/all`);
       if (!response.ok) throw new Error("Error fetching products");
 
+      // Parse the JSON response
       const data: Product[] = await response.json();
       setAllProducts(data);
     } catch (error) {
@@ -65,6 +71,7 @@ export default function Dashboard() {
     }
   };
 
+  // Filter products based on the search term
   const filteredProducts = allProducts.filter((product) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -104,6 +111,7 @@ export default function Dashboard() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           
+          {/** Display loading skeletons while data is being fetched */}
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 [@media(min-width:2920px)]:grid-cols-8 gap-6">
               {[...Array(24)].map((_, i) => (
@@ -119,11 +127,13 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+              {/** Display filtered products */}
               {filteredProducts.map((product) => (
                 console.log(product),
 
                 <div
                   key={product.id}
+                  // Navigate to product details on click
                   onClick={() => navigate(`/product?id=${product.id}`)}
                   className="cursor-pointer bg-gray-100 dark:bg-neutral-900 rounded-xl border shadow-sm p-4 transition hover:scale-[1.02] hover:shadow-lg"
                 >
@@ -144,6 +154,7 @@ export default function Dashboard() {
 
                     </div>
                     {
+                      // Display percentage change badge with appropriate color and arrow
                       product.percentage_change > 0 ? (
                         <Badge variant="default" className="h-6 w-12 self-end flex items-center justify-center bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-md text-xs">
                           ↓ {product.percentage_change}%

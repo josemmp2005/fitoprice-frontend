@@ -1,6 +1,10 @@
+/**
+ * Scraping Panel Page
+ *  This component displays a panel for managing scraping jobs for companies.
+ */
+
 import { useState, useEffect } from "react";
 import API_BASE_URL from "../config/api";
-// import { useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
     Breadcrumb,
@@ -16,7 +20,6 @@ import {
     SidebarProvider,
     SidebarTrigger,
 } from "@/components/ui/sidebar";
-
 import { Skeleton } from "@/components/ui/skeleton";
 import {
     Table,
@@ -60,7 +63,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-
 import { Switch } from "@/components/ui/switch"
 
 export default function CompaniesPanel() {
@@ -74,15 +76,15 @@ export default function CompaniesPanel() {
     const [linkSelector, setLinkSelector] = useState("");
     const [selectedCompany, setSelectedCompany] = useState<any>(null);
     const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-    // local active states per url id to make switch visually responsive for debugging
     const [activeStates, setActiveStates] = useState<Record<string, boolean>>({});
     const [selectedUrlId, setSelectedUrlId] = useState<string | null>(null);
-    // const navigate = useNavigate();
 
+    // function to handle opening the sheet and setting the selected company and url config. Giving company and urlObj as parameters
     const handleOpenSheet = (company: any, urlObj: any) => {
-        setSelectedCompany(company);
-        const config = urlObj.scraping_config;
-        setUrlScrap(config?.url || "");
+        setSelectedCompany(company); // Set selected company
+        const config = urlObj.scraping_config; // Get scraping config
+        // Set form fields with existing config values
+        setUrlScrap(config?.url || ""); 
         setNameSelector(config?.selector_title || "");
         setPriceSelector(config?.selector_price || "");
         setImgSelector(config?.selector_image || "");
@@ -92,7 +94,8 @@ export default function CompaniesPanel() {
         setSelectedUrlId(String(urlObj.id));
     };
 
-    async function createNewScrepingConf() {
+    // Function to create new scraping configuration
+    async function createNewScrapingConf() {
         try {
             const response = await fetch(`${API_BASE_URL}/scraping/scraping-job`, {
                 method: "POST",
@@ -114,13 +117,13 @@ export default function CompaniesPanel() {
         }
     }
 
+    // Function to handle form submission for creating a new scraping configuration using the Dialog UI component
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedCompanyId) return;
 
-        // console.log(selectedCompanyId, urlScrap, nameSelector, priceSelector, imgSelector, linkSelector);
-
-        await createNewScrepingConf();
+        // Call the funciton previously defined to create the scraping configuration
+        await createNewScrapingConf();
 
         // Reset form fields
         setSelectedCompanyId("");
@@ -130,13 +133,16 @@ export default function CompaniesPanel() {
         setImgSelector("");
         setLinkSelector("");
 
+        // Reload the page to reflect new scraping job
         window.location.reload();
-
     }
 
+    // Function to handle form submission for updating an existing scraping configuration using the Sheet UI component
     const handleSubmitUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedCompany || !selectedUrlId) return;
+        
+        // Update scraping configuration
         try {
             const response = await fetch(`${API_BASE_URL}/scraping/scraping-job/${selectedUrlId}`, {
                 method: "PUT",
@@ -153,12 +159,15 @@ export default function CompaniesPanel() {
                 }),
             });
             if (!response.ok) throw new Error("Error updating scraping config");
+            
+            // Reload the page to reflect updated scraping job
             window.location.reload();
         } catch (error) {
             console.error("Error updating scraping config:", error);
         }
     }
 
+    // Function to fetch companies with scraping configuration
     const getCompaniesConf = async (): Promise<void> => {
         try {
             const response = await fetch(`${API_BASE_URL}/companies/scraping-config`, {
@@ -170,14 +179,13 @@ export default function CompaniesPanel() {
                 throw new Error("Failed to fetch companies");
             }
             const data = await response.json();
-            // console.log(data[1].company_urls[0].scraping_config.selector_title);
             setScrapedCompanies(data);
         } catch (error) {
             console.error("Error fetching companies:", error);
         }
     };
 
-
+    // Function to fetch all companies
     const getCompanies = async (): Promise<void> => {
         try {
             const response = await fetch(`${API_BASE_URL}/companies/all`, {
@@ -193,7 +201,7 @@ export default function CompaniesPanel() {
         }
     }
 
-
+    // Fetch companies and their scraping configurations on component mount 
     useEffect(() => {
         getCompaniesConf();
         getCompanies();
@@ -228,7 +236,8 @@ export default function CompaniesPanel() {
                     </header>
 
                     <section className="p-8">
-                        <h1 className="text-2xl font-bold p-4">Tareas de Scraping</h1>
+                        <h2 className="text-2xl font-bold p-4">Tareas de Scraping</h2>
+                        {/* Dialog for adding new scraping job */}
                         <Dialog>
                             <form>
                                 <DialogTrigger asChild>
@@ -244,6 +253,7 @@ export default function CompaniesPanel() {
                                     <div className="grid gap-4">
                                         <div className="grid gap-3">
                                             <Label htmlFor="name-1">Empresa</Label>
+                                            {/* Select company for scraping task */}
                                             <Select onValueChange={(value) => setSelectedCompanyId(value)} value={selectedCompanyId}>
                                                 <SelectTrigger className="w-full">
                                                     <SelectValue placeholder="Selecciona una empresa" />
@@ -327,6 +337,7 @@ export default function CompaniesPanel() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
+                                {/* Display loading skeleton if no companies are loaded */}
                                 {scrapedCompanies.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5}>
@@ -334,9 +345,12 @@ export default function CompaniesPanel() {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
+                                    // Map through companies and their URLs to create table rows
                                     scrapedCompanies.flatMap((company: any) =>
                                         company.company_urls.length > 0
-                                            ? company.company_urls.map((urlObj: any) => (
+                                         // If company has URLs, map through them 
+                                            ? company.company_urls.map((urlObj: any) => ( 
+                                                // Create a table row for each URL
                                                 <TableRow key={`${company.id}-${urlObj.id}`}>
                                                     <TableCell className="font-medium">{company.name}</TableCell>
                                                     <TableCell>
@@ -351,6 +365,7 @@ export default function CompaniesPanel() {
                                                     </TableCell>
                                                     <TableCell>{company.scrape_status || "Desconocido"}</TableCell>
                                                     <TableCell>
+                                                        {/* Display active status with color coding */}
                                                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${urlObj.active
                                                             ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                                                             : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
@@ -359,6 +374,7 @@ export default function CompaniesPanel() {
                                                         </span>
                                                     </TableCell>
                                                     <TableCell>
+                                                        {/* Button to open sheet for editing scraping configuration */}
                                                         <Sheet>
                                                             <SheetTrigger asChild>
                                                                 <Button
@@ -415,13 +431,12 @@ export default function CompaniesPanel() {
                                                                         />
                                                                     </div>
                                                                     <div className="flex items-center space-x-2">
+                                                                        {/* Switch to toggle active state */}
                                                                         <Switch
                                                                             id={`active-switch-${urlObj.id}`}
                                                                             checked={activeStates[String(urlObj.id)] ?? Boolean(urlObj.active)}
                                                                             onCheckedChange={(checked) => {
-                                                                                // Update local controlled state and log changes
-                                                                                setActiveStates(prev => ({ ...prev, [String(urlObj.id)]: checked }));
-                                                                                console.log(`Scraping URL id=${urlObj.id} (${urlObj.url}) - previous active=`, urlObj.active, "-> new checked=", checked)
+                                                                                setActiveStates(prev => ({ ...prev, [String(urlObj.id)]: checked })); // Update local controlled state
                                                                             }}
                                                                         />
                                                                         <Label htmlFor={`active-switch-${urlObj.id}`}>Activa</Label>
@@ -440,7 +455,7 @@ export default function CompaniesPanel() {
                                                     </TableCell>
                                                 </TableRow>
                                             ))
-                                            : [] // No mostrar nada si no tiene URLs
+                                            : [] // If no URLs, return empty array
                                     )
                                 )}
                             </TableBody>

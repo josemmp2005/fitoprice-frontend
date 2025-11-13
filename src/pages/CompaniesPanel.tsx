@@ -1,8 +1,13 @@
+/**
+ *  Companies Panel Page 
+ * 
+ * This page allows managing companies, including viewing existing companies and adding new ones.
+ * 
+ */
+
 import { useState, useEffect } from "react";
 import API_BASE_URL from "../config/api";
 import { useNavigate } from "react-router-dom";
-
-
 import { AppSidebar } from "@/components/app-sidebar";
 import {
     Breadcrumb,
@@ -18,7 +23,6 @@ import {
     SidebarProvider,
     SidebarTrigger,
 } from "@/components/ui/sidebar";
-
 import { Skeleton } from "@/components/ui/skeleton";
 import {
     Table,
@@ -47,11 +51,10 @@ export default function CompaniesPanel() {
 
     const [companies, setCompanies] = useState([]);
     const navigate = useNavigate();
-
-    // Estados para el formulario
     const [companyName, setCompanyName] = useState("");
     const [companyWebsite, setCompanyWebsite] = useState("");
 
+    // Define company interface to type the product data
     interface Company {
         id: number;
         name: string;
@@ -59,6 +62,7 @@ export default function CompaniesPanel() {
         website: string;
     }
 
+    // Fetch all companies from the API
     const getCompanies = async (): Promise<void> => {
         try {
             const response = await fetch(`${API_BASE_URL}/companies/all`, {
@@ -74,6 +78,7 @@ export default function CompaniesPanel() {
         }
     }
 
+    // Create a new company via the API
     const createNewCompany = async (companyData: any): Promise<void> => {
         try {
             const response = await fetch(`${API_BASE_URL}/companies/add`, {
@@ -93,33 +98,34 @@ export default function CompaniesPanel() {
         getCompanies();
     }, []);
 
+    // Handle company creation with confirmation
     const handleCompanyCreation = async () => {
-        // Confirmación antes de crear
+        // Confirm before creating a new company
         const confirmCreate = window.confirm(
             `¿Deseas crear la empresa "${companyName}"?\n\nSitio web: ${companyWebsite}`
         );
 
         if (!confirmCreate) {
-            return; // Si cancela, no hacer nada
+            return; 
         }
 
-        // Mostrar datos por consola
+        // Prepare company data for creation
         const companyData = {
             name: companyName,
             website: companyWebsite
         };
 
         try {
+            // Call API to create new company
             await createNewCompany(companyData);
             
-            // Mostrar mensaje de éxito
             alert("¡Empresa creada exitosamente!");
             
-            // Limpiar formulario
+            // Clean up form
             setCompanyName("");
             setCompanyWebsite("");
             
-            // Refrescar la página para mostrar la nueva empresa
+            // Refresh companies list
             window.location.reload();
         } catch (error) {
             alert("Error al crear la empresa. Por favor, intenta de nuevo.");

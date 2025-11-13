@@ -24,7 +24,6 @@ export default function Landing() {
                 <LandingInfo />
                 <Contact />
                 <LandingFooter />
-
             </main>
 
         </>

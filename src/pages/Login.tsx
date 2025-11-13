@@ -1,3 +1,7 @@
+/**
+ * Login page for admin authentication 
+ */
+
 import { useState } from "react";
 import { Button } from "../components/ui/button";
 import {
@@ -8,11 +12,11 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../components/ui/card";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/config/supabase";
+} from "../components/ui/card"; // Card components
+import { Input } from "../components/ui/input"; // Input component
+import { Label } from "../components/ui/label"; // Label component
+import { useNavigate } from "react-router-dom";  // Navigation hook
+import { supabase } from "@/config/supabase"; // Supabase client
 
 export default function Login() {
   const navigate = useNavigate();
@@ -21,11 +25,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Handle login form submission
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
 
+    // Authenticate using Supabase auth
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -37,7 +43,7 @@ export default function Login() {
       return;
     }
 
-    // ✅ login correcto → redirigir al panel admin
+    // Redirect to admin dashboard on successful login
     navigate("/admin/dashboard");
   };
 

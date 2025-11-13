@@ -1,6 +1,11 @@
+/**
+ * NotFound Page Component
+ * Displays a 404 error message when a user navigates to a non-existent route. Also includes a button to return to the landing page.
+ */
+
+
 import logo from '../assets/imgs/logo.png';
 import { Button } from "@/components/ui/button";
-
 
 export default function NotFound() {
     return (

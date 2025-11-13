@@ -1,3 +1,11 @@
+/**
+ * Product Detail Page
+ * 
+ * This component displays detailed information about a specific product,
+ * including its price history chart and a list of companies selling the product.
+ * It fetches data from the API based on the product ID obtained from the URL query parameters.
+ */
+
 "use client"
 import { useEffect, useState } from "react";
 import API_BASE_URL from "@/config/api";
@@ -42,30 +50,31 @@ import {
     ChartTooltipContent,
 } from "@/components/ui/chart"
 
-// Interfaces
+// Define the Product interface to type the product data
 interface Product {
-        id: number;
-        name: string;
-        brand: string | null;
-        category: string | null;
-        unit: string | null;
-        created_at: string;
-        product_img_url: string;
-        price: number;
-        percentage_change: number;
-        scraped_at: string;
-        product_link: string;
-        company_id: number;
-        company_name: string;
-        company_website: string;
+    id: number;
+    name: string;
+    brand: string | null;
+    category: string | null;
+    unit: string | null;
+    created_at: string;
+    product_img_url: string;
+    price: number;
+    percentage_change: number;
+    scraped_at: string;
+    product_link: string;
+    company_id: number;
+    company_name: string;
+    company_website: string;
 }
 
-
+// Define the ChartDataPoint interface for chart data points
 interface ChartDataPoint {
     month: string;
     desktop: number;
 }
 
+// Define the PriceHistoryItem interface for price history data
 interface PriceHistoryItem {
     id: number;
     product_id: number;
@@ -74,6 +83,7 @@ interface PriceHistoryItem {
     scraped_at: string;
 }
 
+// Define the CompanieSeller interface for companies selling the product
 interface CompanieSeller {
     id: number;
     name: string;
@@ -91,7 +101,7 @@ const chartConfig = {
     },
 } satisfies ChartConfig
 
-// Mock data (temporal - reemplazar con datos reales de API)
+// Mock data for the chart before real data is loaded
 const mockChartData: ChartDataPoint[] = [
     { month: "Enero", desktop: 186 },
     { month: "Febrero", desktop: 305 },
@@ -101,34 +111,44 @@ const mockChartData: ChartDataPoint[] = [
     { month: "Junio", desktop: 214 },
 ]
 
+/**
+ * Params: an PriceHistoryItems[] array whitch it've at least price and scraped_at
+ * Output: ChartDataPoint[] array formatted for the chart whicth it've month and desktop(price)
+ * Overview: This function transforms raw price history data into a format suitable for charting.
+ * 
+ * @param priceHistory 
+ * @returns 
+ */
+
 const setGraphicData = (priceHistory: PriceHistoryItem[]): ChartDataPoint[] => {
+    // Check if priceHistory is valid and has data
     if (!priceHistory || priceHistory.length === 0) {
         return mockChartData;
     }
 
-    // Ordenar por fecha primero
-    const sortedHistory = [...priceHistory].sort((a, b) => 
+    // Sort price history by scraped_at date in ascending order creating a new sorted array
+    const sortedHistory = [...priceHistory].sort((a, b) =>
         new Date(a.scraped_at).getTime() - new Date(b.scraped_at).getTime()
     );
 
-    // Crear un punto de datos por cada scraping
+    // Map sorted history to chart data format
     const chartData: ChartDataPoint[] = sortedHistory.map(item => {
         const date = new Date(item.scraped_at);
-        // Formato: "DD/MM HH:mm" para mostrar día y hora
-        const dateLabel = date.toLocaleDateString('es-ES', { 
-            day: '2-digit', 
+        // Format date to 'DD/MM HH:MM' in Spanish locale
+        const dateLabel = date.toLocaleDateString('es-ES', {
+            day: '2-digit',
             month: '2-digit',
             hour: '2-digit',
             minute: '2-digit'
         });
 
+        // Round the price to two decimal places
         return {
             month: dateLabel,
-            desktop: Math.round((item.price / 100) * 100) / 100 // Convertir centavos a euros
+            desktop: Math.round((item.price / 100) * 100) / 100
         };
     });
 
-    // Devolver TODOS los datos para mostrarlos en el gráfico
     return chartData;
 };
 
@@ -141,13 +161,16 @@ export default function ProductDetail() {
     const productId = new URLSearchParams(window.location.search).get('id') || '';
     const [companiesSellers, setCompaniesSellers] = useState<CompanieSeller[]>([]);
 
-     const getProduct = async (): Promise<void> => {
+    // Function to fetch product details
+    const getProduct = async (): Promise<void> => {
+        // Validate productId 
         if (!productId) {
             setError('No se proporcionó un ID de producto');
             setLoading(false);
             return;
         }
 
+        // Fetch product data from the API
         try {
             setLoading(true);
             const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
@@ -173,6 +196,7 @@ export default function ProductDetail() {
         }
     };
 
+    // Function to fetch the last price of the product
     const getLastPrice = async (): Promise<void> => {
         try {
             const response = await fetch(`${API_BASE_URL}/products/${productId}/last-price`, {
@@ -195,6 +219,7 @@ export default function ProductDetail() {
         }
     };
 
+    // Function to fetch historical prices of the product
     const getHistoricalPrices = async (): Promise<void> => {
         try {
             const response = await fetch(`${API_BASE_URL}/products/${productId}/price-history`, {
@@ -208,11 +233,7 @@ export default function ProductDetail() {
             }
 
             const data = await response.json();
-            console.log('Historical Prices Data:', data);
-
-            // Actualizar los datos del gráfico
             const newChartData = setGraphicData(data);
-            console.log('Chart Data:', newChartData);
             setChartData(newChartData);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
@@ -221,6 +242,7 @@ export default function ProductDetail() {
         }
     };
 
+    //  Function to fetch companies selling the product
     const getCompaniesSellers = async (): Promise<void> => {
         try {
             const response = await fetch(`${API_BASE_URL}/companies/${productId}/`, {
@@ -234,7 +256,6 @@ export default function ProductDetail() {
             }
 
             const data = await response.json();
-            console.log('Companies Sellers Data:', data);
             setCompaniesSellers(data);
         }
         catch (err) {
@@ -251,7 +272,7 @@ export default function ProductDetail() {
         getCompaniesSellers();
     }, [productId]);
 
-    // Loading state
+    // Render loading view if loading is true
     if (loading) {
         return (
             <SidebarProvider>
@@ -266,7 +287,7 @@ export default function ProductDetail() {
         );
     }
 
-    // Error state
+    // Render error view if error is not null
     if (error) {
         return (
             <SidebarProvider>
@@ -281,7 +302,7 @@ export default function ProductDetail() {
         );
     }
 
-    // No product found
+    // Render product not found view if product is null
     if (!product) {
         return (
             <SidebarProvider>
@@ -300,8 +321,7 @@ export default function ProductDetail() {
         <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
-                {/* Header */}
-                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                 <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
                     <SidebarTrigger className="-ml-1" />
                     <Separator
                         orientation="vertical"
@@ -324,9 +344,7 @@ export default function ProductDetail() {
                     </Breadcrumb>
                 </header>
 
-                {/* Main Content */}
                 <section className="p-8 space-y-8">
-                    {/* Product Header */}
                     <div className="space-y-2">
                         <h1 className="text-4xl font-bold">{product.name}</h1>
                         <div className="flex items-center gap-4 text-muted-foreground">
@@ -337,9 +355,7 @@ export default function ProductDetail() {
                         </div>
                     </div>
 
-                    {/* Main Grid Layout */}
                     <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-                        {/* Left Column - Product Image */}
                         <Card className="xl:col-span-1 overflow-hidden flex flex-col">
                             <CardContent className="flex items-center justify-center p-6 flex-1">
                                 <img
@@ -353,17 +369,17 @@ export default function ProductDetail() {
                             </CardContent>
                         </Card>
 
-                        {/* Right Column - Chart and Table */}
+                        {/* Graph with price evolution */}
                         <div className="xl:col-span-3 space-y-6">
-                            {/* Price Chart Card */}
                             <Card className="h-fit">
                                 <CardHeader>
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <CardTitle>Evolución de Precios</CardTitle>
-                                            <CardDescription>Historial completo de scraping ({chartData.length} registros)</CardDescription>
+                                            <CardDescription>Historial completo de precios ({chartData.length} registros)</CardDescription>
                                         </div>
                                         {
+                                            // Display percentage change with appropriate icon and color depending on its value
                                             product.percentage_change > 0 ? (
                                                 <div className="flex items-center gap-2 text-sm font-medium text-green-600">
                                                     <TrendingUp className="h-4 w-4" />
@@ -380,6 +396,7 @@ export default function ProductDetail() {
                                 </CardHeader>
                                 <CardContent>
                                     <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                                        {/* Line chart displaying price evolution */}
                                         <LineChart
                                             accessibilityLayer
                                             data={chartData}
@@ -390,8 +407,8 @@ export default function ProductDetail() {
                                                 bottom: 12,
                                             }}
                                         >
-                                            <CartesianGrid 
-                                                strokeDasharray="3 3" 
+                                            <CartesianGrid
+                                                strokeDasharray="3 3"
                                                 vertical={false}
                                                 className="stroke-muted"
                                             />
@@ -407,7 +424,7 @@ export default function ProductDetail() {
                                             />
                                             <ChartTooltip
                                                 cursor={{ strokeDasharray: '3 3' }}
-                                                content={<ChartTooltipContent 
+                                                content={<ChartTooltipContent
                                                     hideLabel
                                                     formatter={(value) => `${value} €`}
                                                 />}
@@ -458,7 +475,7 @@ export default function ProductDetail() {
                                         </TableHeader>
                                         <TableBody>
                                             {companiesSellers.map((companieSeller: CompanieSeller) => (
-                                                <TableRow 
+                                                <TableRow
                                                     key={companieSeller.id}
                                                     className="transition-colors hover:bg-muted/50 cursor-pointer"
                                                     onClick={() => window.open(companieSeller.product_link, '_blank', 'noopener,noreferrer')}

@@ -1,3 +1,10 @@
+/**
+ *  Products Panel Page
+ * 
+ *  This component displays a panel with a list of products fetched from the API.
+ *  It includes a search input to filter products by name.
+ */
+
 import { useEffect, useState } from "react";
 import API_BASE_URL from "@/config/api";
 import {
@@ -33,12 +40,21 @@ import { Input } from "@/components/ui/input";
 
 export default function ProductsPanel() {
 
+    // Define the Product interface to type the product data
     interface Product {
         id: number;
         name: string;
-        price: number;
-        company_name: string;
+        brand: string | null;
+        category: string | null;
+        unit: string | null;
+        created_at: string;
         product_img_url: string;
+        price: number;
+        percentage_change: number;
+        scraped_at: string;
+        product_link: string;
+        company_id: number;
+        company_name: string;
         company_website: string;
     }
 
@@ -50,7 +66,7 @@ export default function ProductsPanel() {
         getAllProducts();
     }, []);
 
-
+    // Function to fetch all products from the API
     const getAllProducts = async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/products/all`, {
@@ -66,6 +82,7 @@ export default function ProductsPanel() {
         }
     }
 
+    // Filter products based on the search term
     const filteredProducts = products.filter((product) =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -110,7 +127,7 @@ export default function ProductsPanel() {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                        
+
                         <div>
                             <Table>
                                 <TableHeader>
@@ -125,7 +142,6 @@ export default function ProductsPanel() {
                                     {filteredProducts.map((product: any) => (
                                         <TableRow key={product.id}>
                                             <TableCell>{product.id}</TableCell>
-                                            <TableCell>{product.name}</TableCell>
                                             <TableCell className="transition-colors hover:bg-muted/50 cursor-pointer" onClick={() => window.open(product.company_website, '_blank', 'noopener,noreferrer')}>{product.company_name}</TableCell>
                                             <TableCell><a href={product.product_img_url}>{product.product_img_url}</a></TableCell>
                                         </TableRow>

@@ -1,3 +1,9 @@
+/**
+ * Admin Panel Page
+ * 
+ * Provides an overview of companies, products, and scraping status.
+ */
+
 import { useState, useEffect } from "react";
 import API_BASE_URL from "../config/api";
 import { useNavigate } from "react-router-dom";
@@ -27,6 +33,7 @@ import {
     TableRow
 } from "@/components/ui/table";
 
+// Define TypeScript interface for Company
 interface Company {
     id: number;
     name: string;
@@ -48,6 +55,7 @@ export default function AdminPanel() {
     }, []);
 
 
+    // Fetch companies from API
     const getCompanies = async (): Promise<void> => {
         try {
             const response = await fetch(`${API_BASE_URL}/companies/all`, {
@@ -64,6 +72,7 @@ export default function AdminPanel() {
         }
     }
 
+    // Fetch last scrape date from API
     const lastScrapeDate = async (): Promise<void> => {
         try {
             const response = await fetch(`${API_BASE_URL}/products/last-scraped`, {
@@ -81,6 +90,7 @@ export default function AdminPanel() {
         }
     }
     
+    // Fetch total product count from API
     const countTotalProducts = async (): Promise<void> => {
         try {
             const response = await fetch(`${API_BASE_URL}/products/count`, {
@@ -97,6 +107,7 @@ export default function AdminPanel() {
         }
     }
 
+    // Fetch products from API
     const getProducts = async (): Promise<void> => {
         try {
             const response = await fetch(`${API_BASE_URL}/products/fifteen`, {
