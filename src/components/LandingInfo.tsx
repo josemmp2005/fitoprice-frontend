@@ -1,6 +1,11 @@
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Leaf, BarChart3, Users } from "lucide-react";
+/**
+ * Info component about the mission and purpose of Fitoprice.
+ */
 
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; // Componentes de la UI
+import { Leaf, BarChart3, Users } from "lucide-react"; // Iconos
+
+// Definition of the missionCards array
 const missionCards = [
     {
         icon: Leaf,

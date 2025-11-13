@@ -1,11 +1,16 @@
+/**
+ *  Contact component with a form and contact information. Not working yet.
+ */
+
 import { useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Mail, Phone, MapPin } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"; // Card components
+import { Input } from "@/components/ui/input"; // Input component
+import { Label } from "@/components/ui/label"; // Label component
+import { Button } from "@/components/ui/button"; // Button component
+import { Mail, Phone, MapPin } from "lucide-react"; // Icons
 
 export default function Contact() {
+    // State for form data
     const [formData, setFormData] = useState({
         name: "",
         email: "",
@@ -13,22 +18,25 @@ export default function Contact() {
         message: ""
     });
 
+    // Handle input changes
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
+        // Update form data state
         setFormData(prev => ({
             ...prev,
             [name]: value
         }));
     };
 
+    // Handle form submission
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted:", formData);
-        // Aquí puedes agregar la lógica para enviar el formulario
+        // console.log("Form submitted:", formData);
         alert("¡Mensaje enviado! Nos pondremos en contacto contigo pronto.");
         setFormData({ name: "", email: "", phone: "", message: "" });
     };
 
+    // Contact information data
     const contactInfo = [
         {
             icon: Mail,
@@ -61,7 +69,6 @@ export default function Contact() {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-8">
-                    {/* Formulario */}
                     <Card className="shadow-lg">
                         <CardHeader>
                             <CardTitle>Envíanos un mensaje</CardTitle>
@@ -125,7 +132,6 @@ export default function Contact() {
                         </CardContent>
                     </Card>
 
-                    {/* Información de contacto */}
                     <div className="space-y-6">
                         <Card className="shadow-lg">
                             <CardHeader>

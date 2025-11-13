@@ -1,3 +1,8 @@
+/**
+ *  LandingFooter Component for the landing page footer
+ * 
+ */
+
 export default function LandingFooter() {
     return (
         <footer className="w-full border-t border-gray-400 mt-20">

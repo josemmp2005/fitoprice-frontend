@@ -1,6 +1,11 @@
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { DollarSign, FileText, TrendingDown } from "lucide-react";
+/**
+ * Component to display the main problems faced by farmers due to lack of price transparency.
+ */
 
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; // Componentes de la UI
+import { DollarSign, FileText, TrendingDown } from "lucide-react"; // Iconos
+
+// Definition of the problems array
 const problems = [
     {
         icon: DollarSign,
@@ -24,13 +29,13 @@ const problems = [
 
 export default function Problems() {
     return (
-        <section className="text-center mt-20 px-4 w-full">
-            
+        <section className="text-center mt-20 px-4 w-full">            
             <div className="max-w-3xl mx-auto">
                 <h2 className="text-4xl font-semibold mb-8">El Costo Real De La Opcacidad</h2>
                 <p className="mt-2 text-xl">Descubre cómo la falta de transparencia en los precios de los insumos afecta directamente la rentabilidad y eficiencia de tu campo.</p>
             </div>
             <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                {/** Maping problems */}
                 {problems.map((problem, index) => {
                     const IconComponent = problem.icon;
                     return (

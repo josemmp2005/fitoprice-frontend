@@ -1,8 +1,11 @@
-import landingImg from '../assets/imgs/landing.png';
-import wLandingImg from '../assets/imgs/w-landing.png';
-import { CheckCircle2, TrendingUp, BarChart3 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+// Component to showcase the main features of FitoPrice platform 
 
+import landingImg from '../assets/imgs/landing.png'; // Dark mode image
+import wLandingImg from '../assets/imgs/w-landing.png'; // Light mode image
+import { CheckCircle2, TrendingUp, BarChart3 } from 'lucide-react'; // Icons
+import { useEffect, useState } from 'react'; // React hooks
+
+// Definition of the features array
 const features = [
     {
         icon: BarChart3,
@@ -24,12 +27,12 @@ const features = [
 export default function Characteristics() {
     const [isDark, setIsDark] = useState(false);
 
+    const checkTheme = () => {
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        setIsDark(isDarkMode);
+    };
+
     useEffect(() => {
-        // Detectar tema inicial
-        const checkTheme = () => {
-            const isDarkMode = document.documentElement.classList.contains('dark');
-            setIsDark(isDarkMode);
-        };
 
         // Comprobar tema al montar
         checkTheme();
@@ -54,7 +57,7 @@ export default function Characteristics() {
             <div className="lg:flex gap-12 items-center">
                 <div className="space-y-6 order-2 lg:order-1 flex-1">
                     {features.map((feature, index) => (
-                        <div 
+                        <div
                             key={index}
                             className="group flex gap-4 p-6 rounded-xl border bg-card hover:bg-accent/50 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] animate-fade-in-custom-delay-400"
                             style={{ animationDelay: `${index * 100}ms` }}
@@ -77,9 +80,9 @@ export default function Characteristics() {
                 <div className="order-1 lg:order-2 relative flex-1 mt-10 lg:mt-0">
                     <div className="relative group lg:[perspective:1000px]">
                         <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-primary/5 rounded-2xl blur-2xl group-hover:blur-3xl transition-all duration-300 opacity-50" />
-                        <img 
-                            src={isDark ? landingImg : wLandingImg} 
-                            alt="FitoPrice Platform Preview" 
+                        <img
+                            src={isDark ? landingImg : wLandingImg}
+                            alt="FitoPrice Platform Preview"
                             className="relative w-full h-auto rounded-2xl shadow-2xl max-w-6xl [transform:rotateY(-15deg)] [transform-style:preserve-3d] [mask-image:linear-gradient(to_bottom,black_80%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_80%,transparent_100%)]"
                         />
                     </div>
