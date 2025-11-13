@@ -48,7 +48,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function CompaniesPanel() {
-
+    const token = localStorage.getItem("token");
     const [companies, setCompanies] = useState([]);
     const navigate = useNavigate();
     const [companyName, setCompanyName] = useState("");
@@ -85,6 +85,7 @@ export default function CompaniesPanel() {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
                 },
                 body: JSON.stringify({ name: companyData.name, website: companyData.website }),
             });
