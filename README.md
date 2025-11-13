@@ -4,14 +4,13 @@ Este repositorio contiene el **frontend de FitoPrice**, una plataforma que permi
 Desarrollada con **React**, **TypeScript**, **TailwindCSS** y **shadcn/ui**, ofrece una interfaz moderna, rápida y totalmente responsive.
 
 ---
+##  Tecnologías Principales
 
-## 🚀 Tecnologías Principales
-
-- ⚛️ **React + Vite** — entorno rápido y modular para desarrollo frontend.  
-- 🧠 **TypeScript** — tipado estático y mayor robustez en el código.  
-- 🎨 **TailwindCSS + shadcn/ui** — diseño moderno y componentes reutilizables.  
-- 🔐 **Supabase** — backend as a service (auth, base de datos, storage).  
-- 🌎 **Netlify** — despliegue del frontend.
+-  **React + Vite** — entorno rápido y modular para desarrollo frontend.  
+-  **TypeScript** — tipado estático y mayor robustez en el código.  
+-  **TailwindCSS + shadcn/ui** — diseño moderno y componentes reutilizables.  
+-  **Supabase** — backend as a service (auth, base de datos, storage).  
+-  **Netlify** — despliegue del frontend.
 
 ## URL 
 - [fitoprice.netlify.app](https://fitoprice.netlify.app)
