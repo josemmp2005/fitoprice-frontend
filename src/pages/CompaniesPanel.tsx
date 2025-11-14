@@ -48,7 +48,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function CompaniesPanel() {
-    const token = localStorage.getItem("token");
+    const _storedAuth = localStorage.getItem("sb-uoagestcrprxatymjzwe-auth-token");
+    let token: string | null = null;
+    try {
+        if (_storedAuth) {
+            const parsed = JSON.parse(_storedAuth);
+            token = parsed?.access_token ?? null;
+        }
+    } catch (err) {
+        console.error("No se pudo parsear el auth token desde localStorage:", err);
+        token = null;
+    }
+
     const [companies, setCompanies] = useState([]);
     const navigate = useNavigate();
     const [companyName, setCompanyName] = useState("");
@@ -107,7 +118,7 @@ export default function CompaniesPanel() {
         );
 
         if (!confirmCreate) {
-            return; 
+            return;
         }
 
         // Prepare company data for creation
@@ -119,13 +130,13 @@ export default function CompaniesPanel() {
         try {
             // Call API to create new company
             await createNewCompany(companyData);
-            
+
             alert("¡Empresa creada exitosamente!");
-            
+
             // Clean up form
             setCompanyName("");
             setCompanyWebsite("");
-            
+
             // Refresh companies list
             window.location.reload();
         } catch (error) {
@@ -180,8 +191,8 @@ export default function CompaniesPanel() {
                                 <div className="grid flex-1 auto-rows-min gap-6 px-4">
                                     <div className="grid gap-3">
                                         <Label htmlFor="company-name">Nombre</Label>
-                                        <Input 
-                                            id="company-name" 
+                                        <Input
+                                            id="company-name"
                                             placeholder="AgroProductos"
                                             value={companyName}
                                             onChange={(e) => setCompanyName(e.target.value)}
@@ -189,8 +200,8 @@ export default function CompaniesPanel() {
                                     </div>
                                     <div className="grid gap-3">
                                         <Label htmlFor="company-website">Web</Label>
-                                        <Input 
-                                            id="company-website" 
+                                        <Input
+                                            id="company-website"
                                             placeholder="www.example.com"
                                             value={companyWebsite}
                                             onChange={(e) => setCompanyWebsite(e.target.value)}

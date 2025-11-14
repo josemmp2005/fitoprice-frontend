@@ -66,7 +66,19 @@ import {
 import { Switch } from "@/components/ui/switch"
 
 export default function CompaniesPanel() {
-    const token = localStorage.getItem("token");
+    // Retrieve auth token from localStorage
+    const _storedAuth = localStorage.getItem("sb-uoagestcrprxatymjzwe-auth-token");
+    let token: string | null = null;
+    try {
+        if (_storedAuth) {
+            const parsed = JSON.parse(_storedAuth);
+            token = parsed?.access_token ?? null;
+        }
+    } catch (err) {
+        console.error("No se pudo parsear el auth token desde localStorage:", err);
+        token = null;
+    }
+
     const [scrapedCompanies, setScrapedCompanies] = useState([]);
     const [companies, setCompanies] = useState([]);
     const [urlScrap, setUrlScrap] = useState("");
