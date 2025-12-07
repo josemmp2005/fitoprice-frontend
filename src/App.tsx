@@ -9,11 +9,13 @@ import CompaniesPanel from './pages/CompaniesPanel'
 import ProductPanel from './pages/ProductsPanel'
 import ScrapingPanel from './pages/ScrapingPanel'
 import NotFound from './pages/NotFound'
+import DatabaseSuspensionBanner from './components/DatabaseSuspensionBanner'
 import './App.css'
 
 function App() {
   return (
     <BrowserRouter>
+      <DatabaseSuspensionBanner />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login/admin" element={<Login />} />
