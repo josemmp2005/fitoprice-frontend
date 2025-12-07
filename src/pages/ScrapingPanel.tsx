@@ -66,6 +66,18 @@ import {
 import { Switch } from "@/components/ui/switch"
 
 export default function CompaniesPanel() {
+    // Retrieve auth token from localStorage
+    const _storedAuth = localStorage.getItem("sb-uoagestcrprxatymjzwe-auth-token");
+    let token: string | null = null;
+    try {
+        if (_storedAuth) {
+            const parsed = JSON.parse(_storedAuth);
+            token = parsed?.access_token ?? null;
+        }
+    } catch (err) {
+        console.error("No se pudo parsear el auth token desde localStorage:", err);
+        token = null;
+    }
 
     const [scrapedCompanies, setScrapedCompanies] = useState([]);
     const [companies, setCompanies] = useState([]);
@@ -101,6 +113,7 @@ export default function CompaniesPanel() {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     company_id: parseInt(selectedCompanyId),
@@ -148,6 +161,7 @@ export default function CompaniesPanel() {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     url: urlScrap,
@@ -173,6 +187,7 @@ export default function CompaniesPanel() {
             const response = await fetch(`${API_BASE_URL}/companies/scraping-config`, {
                 headers: {
                     "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
                 },
             });
             if (!response.ok) {

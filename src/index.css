@@ -78,7 +78,7 @@ a:hover {
    component.
 */
 
-button:not([class]) {
+button {
     background-color: var(--button-background);
     border: 1px solid var(--button-foreground);
     padding: 1.2rem 1.5rem;
@@ -88,14 +88,17 @@ button:not([class]) {
     color: var(--color);
 }
 
-button:not([class]):hover {
-    border-color: #646cff;
-}
 
-button:not([class]):focus,
-button:not([class]):focus-visible {
-    outline: 4px auto -webkit-focus-ring-color;
+/* button:not([class]) {
+    background-color: var(--button-background);
+    border: 1px solid var(--button-foreground);
+    padding: 1.2rem 1.5rem;
+    border-radius: 0.55rem;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+    color: var(--color);
 }
+ */
 
 @media (prefers-color-scheme: light) {
      :root {
