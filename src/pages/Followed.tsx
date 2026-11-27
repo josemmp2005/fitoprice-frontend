@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
+import LoadError from "@/components/LoadError";
 import ProductListSkeleton from "@/components/ProductListSkeleton";
 import ProductRow from "@/components/ProductRow";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,7 @@ function ChangeNote({ product, entry }: { product: Product; entry: FollowEntry }
 
 export default function Followed() {
     const { followed, count, unfollow } = useFollowed();
-    const { data: products, loading, error } = useApi<Product[]>(count > 0 ? "/products/all" : null);
+    const { data: products, loading, error, reload } = useApi<Product[]>(count > 0 ? "/products/all" : null);
 
     const list = (products ?? []).filter((p) => String(p.id) in followed);
     // Primero los que han cambiado
@@ -63,7 +64,7 @@ export default function Followed() {
                     </Button>
                 </div>
             ) : error ? (
-                <p className="text-muted-foreground">No se han podido cargar los precios ({error}). Comprueba que la API está en marcha.</p>
+                <LoadError what="los precios de tus productos" onRetry={reload} className="rounded-lg border bg-card" />
             ) : loading ? (
                 <div className="overflow-hidden rounded-lg border bg-card">
                     <ProductListSkeleton rows={Math.min(count, 6)} label="Cargando tus productos" />

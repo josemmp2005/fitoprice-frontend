@@ -11,6 +11,7 @@ import { ArrowLeft, Bookmark, BookmarkCheck, ExternalLink } from "lucide-react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import AppShell from "@/components/AppShell";
 import CostCalculator from "@/components/CostCalculator";
+import LoadError from "@/components/LoadError";
 import ProductRow from "@/components/ProductRow";
 import RegistrySection from "@/components/RegistrySection";
 import Price from "@/components/Price";
@@ -134,7 +135,7 @@ export default function ProductDetail() {
     const productId = params.get("id");
     const valid = productId !== null && /^\d+$/.test(productId);
 
-    const { data: products, loading, error } = useApi<Product[]>(valid ? `/products/${productId}` : null);
+    const { data: products, loading, error, reload } = useApi<Product[]>(valid ? `/products/${productId}` : null);
     const { data: history } = useApi<PriceHistoryItem[]>(valid ? `/products/${productId}/price-history` : null);
     const { data: sellers } = useApi<ProductSeller[]>(valid ? `/companies/${productId}` : null);
     const { data: alternatives } = useApi<Product[]>(valid ? `/products/${productId}/alternatives` : null);
@@ -159,13 +160,23 @@ export default function ProductDetail() {
 
     const crumbs = [{ label: "Inicio", to: "/" }, { label: "Catálogo", to: "/dashboard" }, { label: product?.name ?? "Producto" }];
 
-    if (!valid || error || (!loading && !product)) {
+    if (valid && error) {
+        return (
+            <AppShell breadcrumbs={crumbs}>
+                <div className="py-16">
+                    <LoadError what="este producto" onRetry={reload} className="items-start px-0 text-left" />
+                </div>
+            </AppShell>
+        );
+    }
+
+    if (!valid || (!loading && !product)) {
         return (
             <AppShell breadcrumbs={crumbs}>
                 <div className="space-y-4 py-16">
                     <h1 className="headline text-5xl">Este producto no está en el catálogo</h1>
                     <p className="max-w-[60ch] text-muted-foreground">
-                        {error ? `No se ha podido cargar (${error}). Comprueba que la API está en marcha.` : "Puede que el enlace esté mal o que el producto se haya retirado."}
+                        Puede que el enlace esté mal o que el producto se haya retirado.
                     </p>
                     <Button asChild variant="outline">
                         <Link to="/dashboard"><ArrowLeft /> Volver al catálogo</Link>
