@@ -1,221 +1,96 @@
 /**
- * Admin Panel Page
- * 
- * Provides an overview of companies, products, and scraping status.
+ * Resumen del panel de administración: estado de la recogida de precios,
+ * tiendas y primeros productos.
  */
 
-import { useState, useEffect } from "react";
-import API_BASE_URL from "../config/api";
-import { useNavigate } from "react-router-dom";
-import { AppSidebar } from "@/components/app-sidebar";
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-    SidebarInset,
-    SidebarProvider,
-    SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { Link } from "react-router-dom";
+import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
+import Price from "@/components/Price";
+import ProductImage from "@/components/ProductImage";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-    Table,
-    TableBody,
-    // TableCaption,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from "@/components/ui/table";
-
-// Define TypeScript interface for Company
-interface Company {
-    id: number;
-    name: string;
-    product_count: number;
-}
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useApi } from "@/hooks/useApi";
+import type { Company, Product } from "@/lib/types";
+import { formatDate, formatRelative } from "@/lib/utils";
 
 export default function AdminPanel() {
-    const [companies, setCompanies] = useState<Company[]>([]);
-    const [lastScrape, setLastScrape] = useState<string | null>(null);
-    const [countProducts, setCountProducts] = useState<number | null>(null);
-    const [products, setProducts] = useState([]);
-    const navigate = useNavigate();
-
-    useEffect(() => {
-        getCompanies();
-        lastScrapeDate();
-        countTotalProducts();
-        getProducts();
-    }, []);
-
-
-    // Fetch companies from API
-    const getCompanies = async (): Promise<void> => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/companies/all`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-            if (!response.ok) throw new Error("Error fetching companies");
-            const data = await response.json();
-            setCompanies(data);
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    // Fetch last scrape date from API
-    const lastScrapeDate = async (): Promise<void> => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/products/last-scraped`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                }
-            });
-            if (!response.ok) throw new Error("Error fetching last scrape date");
-            const data = await response.json();
-            // console.log(data);
-            setLastScrape(data.scraped_at);
-        } catch (error) {
-            console.error(error);
-        }
-    }
-    
-    // Fetch total product count from API
-    const countTotalProducts = async (): Promise<void> => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/products/count`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-            if (!response.ok) throw new Error("Error fetching product count");
-            const data = await response.json();
-            setCountProducts(data.count);
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    // Fetch products from API
-    const getProducts = async (): Promise<void> => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/products/fifteen`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-            const data = await response.json();
-            setProducts(data);
-        }
-        catch (error) {
-            console.error("Error fetching products:", error);
-        }
-    }
+    const { data: companies } = useApi<Company[]>("/companies/all");
+    const { data: count } = useApi<{ count: number }>("/products/count");
+    const { data: last } = useApi<{ scraped_at: string | null }>("/products/last-scraped");
+    const { data: products } = useApi<Product[]>("/products/fifteen");
+    const ready = companies && count && last;
 
     return (
-        <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-                    <SidebarTrigger className="-ml-1" />
-                    <Separator
-                        orientation="vertical"
-                        className="mr-2 data-[orientation=vertical]:h-4"
-                    />
-                    <Breadcrumb>
-                        <BreadcrumbList>
-                            <BreadcrumbItem className="hidden md:block">
-                                <BreadcrumbLink href="/">Inicio</BreadcrumbLink>
-                            </BreadcrumbItem>
-                            <BreadcrumbSeparator className="hidden md:block" />
-                            <BreadcrumbItem>
-                                <BreadcrumbPage>Admin</BreadcrumbPage>
-                            </BreadcrumbItem>
-                        </BreadcrumbList>
-                    </Breadcrumb>
-                </header>
+        <AppShell breadcrumbs={[{ label: "Admin", to: "/admin/dashboard" }, { label: "Resumen" }]}>
+            <PageHeader title="Resumen" />
 
-                <section className="p-8">
-                    <div className="admin-dashboard lg:flex gap-8">
-                        <div className="flex-1 w-full">
-                            <div className="companies border p-4 rounded-lg" onClick={() => navigate('/admin/companies')}>
-                                <h2 className="text-2xl font-bold mb-4">Empresas Registradas</h2>
-                                {companies.length === 0 ? (
-                                    <Skeleton className="h-10 w-full mb-2" />
-                                ) : (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Nombre</TableHead>
-                                                <TableHead>Productos</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {companies.slice(0, 3).map((company: Company) => (
-                                                <TableRow key={company.id}>
-                                                    <TableCell>{company.name}</TableCell>
-                                                    <TableCell>{company.product_count}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                )}
-                            </div>
-                            <div className="last-scraped mt-8 border p-4 rounded-lg">
-                                <h2 className="text-2xl font-bold">Última Actualización de Datos</h2>
-                                {lastScrape === null ? (
-                                    <Skeleton className="h-6 w-48 mt-2" />
-                                ) : (
-                                    <p className="mt-2">{lastScrape}</p>
-                                )}
-                            </div>
-                            <div className="products-overview mt-8 border p-4 rounded-lg">
-                                <h2 className="text-2xl font-bold">Productos Registrados</h2>
-                                {countProducts === null ? (
-                                    <Skeleton className="h-6 w-24 mt-2" />
-                                ) : (
-                                    <p className="mt-2">{countProducts} productos en total.</p>
-                                )}
-                            </div>
-                        </div>
-                        <div className="products flex-2 border p-4 rounded-lg mt-10 lg:mt-0" onClick ={() => navigate('/admin/products')}>
-                            <h2>Productos</h2>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Product ID</TableHead>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Company</TableHead>
-                                        <TableHead>Image URL</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {products.map((product: any) => (
-                                        <TableRow key={product.id}>
-                                            <TableCell>{product.id}</TableCell>
-                                            <TableCell>{product.name}</TableCell>
-                                            <TableCell className="transition-colors hover:bg-muted/50 cursor-pointer" onClick={() => window.open(product.company_website, '_blank', 'noopener,noreferrer')}>{product.company_name}</TableCell>
-                                            <TableCell><a href={product.product_img_url}>{product.product_img_url}</a></TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
+            <div className="rounded-lg border-l-4 border-primary bg-card px-5 py-4 text-lg">
+                {ready ? (
+                    <p>
+                        Hay <strong>{count.count} productos</strong> de <strong>{companies.length} tiendas</strong>.
+                        La última lectura de precios fue {formatRelative(last.scraped_at)} ({formatDate(last.scraped_at, true)}).
+                    </p>
+                ) : (
+                    <Skeleton className="h-7 w-full max-w-xl" />
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-10 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+                <section className="space-y-4">
+                    <div className="flex items-end justify-between">
+                        <h2 className="headline text-4xl">Tiendas</h2>
+                        <Button asChild variant="link" className="px-0"><Link to="/admin/companies">Gestionar tiendas</Link></Button>
                     </div>
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="border-b-2 border-foreground text-sm">
+                                <th scope="col" className="pb-2 font-semibold">Tienda</th>
+                                <th scope="col" className="pb-2 text-right font-semibold">Productos</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {(companies ?? []).map((company) => (
+                                <tr key={company.id}>
+                                    <td className="py-3 font-bold">{company.name}</td>
+                                    <td className="stencil py-3 text-right text-2xl">{company.product_count}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </section>
-            </SidebarInset>
-        </SidebarProvider>
+
+                <section className="space-y-4">
+                    <div className="flex items-end justify-between">
+                        <h2 className="headline text-4xl">Productos</h2>
+                        <Button asChild variant="link" className="px-0"><Link to="/admin/products">Ver los {count?.count ?? ""} productos</Link></Button>
+                    </div>
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="border-b-2 border-foreground hover:bg-transparent">
+                                <TableHead className="pl-0 font-semibold text-foreground">Producto</TableHead>
+                                <TableHead className="hidden font-semibold text-foreground sm:table-cell">Tienda</TableHead>
+                                <TableHead className="pr-0 text-right font-semibold text-foreground">Precio</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {(products ?? []).slice(0, 6).map((product) => (
+                                <TableRow key={product.id}>
+                                    <TableCell className="pl-0">
+                                        <Link to={`/product?id=${product.id}`} className="flex items-center gap-3 hover:underline">
+                                            <ProductImage src={product.product_img_url} alt="" className="size-9 shrink-0 rounded-sm border" />
+                                            <span className="max-w-[280px] truncate font-semibold">{product.name}</span>
+                                        </Link>
+                                    </TableCell>
+                                    <TableCell className="hidden text-muted-foreground sm:table-cell">{product.company_name}</TableCell>
+                                    <TableCell className="pr-0 text-right"><Price cents={product.price} className="text-xl" /></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </section>
+            </div>
+        </AppShell>
     );
 }

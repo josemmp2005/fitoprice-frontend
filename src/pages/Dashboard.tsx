@@ -1,181 +1,208 @@
 /**
- * Dashboard Page Component - Displays a list of products with search functionality.
+ * Catálogo público: tablilla con todos los productos y su último precio,
+ * con búsqueda, filtros por tienda y tipo, y orden (también por precio por litro o kilo).
+ * La búsqueda (?q=) y el tipo (?tipo=) viven en la URL para poder enlazarlos.
  */
 
-import { useState, useEffect } from "react";
-import API_BASE_URL from "../config/api";
-import { useNavigate } from "react-router-dom";
-import { AppSidebar } from "@/components/app-sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge"
+import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Search } from "lucide-react";
+import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
+import ProductListSkeleton from "@/components/ProductListSkeleton";
+import ProductRow from "@/components/ProductRow";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useApi } from "@/hooks/useApi";
+import type { Product } from "@/lib/types";
+import { cn, formatDate, normalize } from "@/lib/utils";
 
-// Define the Product interface to type the product data
-interface Product {
-        id: number;
-        name: string;
-        brand: string | null;
-        category: string | null;
-        unit: string | null;
-        created_at: string;
-        product_img_url: string;
-        price: number;
-        percentage_change: number;
-        scraped_at: string;
-        product_link: string;
-        company_id: number;
-        company_name: string;
-        company_website: string;
-}
+type SortKey = "catalog" | "price-asc" | "unit-asc" | "price-desc" | "name";
+
+const sortOptions: { value: SortKey; label: string }[] = [
+    { value: "catalog", label: "Orden del catálogo" },
+    { value: "price-asc", label: "Más baratos primero" },
+    { value: "unit-asc", label: "Más baratos por litro o kilo" },
+    { value: "price-desc", label: "Más caros primero" },
+    { value: "name", label: "Por nombre" },
+];
+
+const ALL_TYPES = "all";
+
+const sorters: Record<SortKey, ((a: Product, b: Product) => number) | null> = {
+    catalog: null,
+    "price-asc": (a, b) => (a.price ?? Infinity) - (b.price ?? Infinity),
+    // Los que no tienen envase conocido van al final
+    "unit-asc": (a, b) => (a.price_per_unit ?? Infinity) - (b.price_per_unit ?? Infinity) || (a.price ?? Infinity) - (b.price ?? Infinity),
+    "price-desc": (a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity),
+    name: (a, b) => a.name.localeCompare(b.name, "es"),
+};
 
 export default function Dashboard() {
-  const [allProducts, setAllProducts] = useState<Product[]>([]); // State to hold all products
-  const [searchTerm, setSearchTerm] = useState<string>(""); // State for the search term
-  const [isLoading, setIsLoading] = useState<boolean>(true); // State to manage loading state
-  const navigate = useNavigate();
+    const { data: products, loading, error } = useApi<Product[]>("/products/all");
+    const [params, setParams] = useSearchParams();
+    const searchTerm = params.get("q") ?? "";
+    const type = params.get("tipo");
+    const [company, setCompany] = useState<string | null>(null);
+    const [sort, setSort] = useState<SortKey>("catalog");
 
-  useEffect(() => {
-    // Fetch all products on component mount
-    getAllProducts();
-  }, []);
+    // Cambia un parámetro de la URL sin tocar los demás
+    const setParam = (key: string, value: string | null) =>
+        setParams((current) => {
+            const next = new URLSearchParams(current);
+            if (value) next.set(key, value);
+            else next.delete(key);
+            return next;
+        }, { replace: true });
+    const setSearchTerm = (value: string) => setParam("q", value);
+    const setType = (value: string | null) => setParam("tipo", value);
 
-  // Function to fetch all products from the API
-  const getAllProducts = async (): Promise<void> => {
-    try {
-      // Indicate loading state
-      setIsLoading(true);
-      const response = await fetch(`${API_BASE_URL}/products/all`);
-      if (!response.ok) throw new Error("Error fetching products");
+    // Tipos con su número de productos, de más a menos
+    const types = useMemo(() => {
+        const counts = new Map<string, number>();
+        for (const p of products ?? []) if (p.category) counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
+        return [...counts].sort((a, b) => b[1] - a[1]);
+    }, [products]);
 
-      // Parse the JSON response
-      const data: Product[] = await response.json();
-      setAllProducts(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const companies = useMemo(
+        () => [...new Set((products ?? []).map((p) => p.company_name).filter((name): name is string => Boolean(name)))].sort(),
+        [products],
+    );
 
-  // Filter products based on the search term
-  const filteredProducts = allProducts.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    const lastRead = useMemo(
+        () => (products ?? []).reduce<string | null>((max, p) => (p.scraped_at && (!max || p.scraped_at > max) ? p.scraped_at : max), null),
+        [products],
+    );
 
-  return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mr-2 data-[orientation=vertical]:h-4"
-          />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="/">Inicio</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Productos</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </header>
+    const visibleProducts = useMemo(() => {
+        const term = normalize(searchTerm.trim());
+        const filtered = (products ?? []).filter(
+            (p) =>
+                (!company || p.company_name === company) &&
+                (!type || p.category === type) &&
+                (!term || normalize(p.name).includes(term) || p.active_ingredients.some((a) => normalize(a).includes(term))),
+        );
+        const sorter = sorters[sort];
+        return sorter ? [...filtered].sort(sorter) : filtered;
+    }, [products, searchTerm, company, type, sort]);
 
-        <section className="p-8">
-          <h1 className="text-3xl font-bold mb-6">Dashboard de Productos </h1>
-          <p className="mb-2">{filteredProducts.length} productos encontrados</p>
+    const filtering = Boolean(searchTerm || company || type);
 
-          <Input
-            type="text"
-            className="border border-gray-300 dark:border-neutral-700 bg-transparent p-2 rounded-lg mb-6 w-full md:w-1/2 focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="Buscar productos..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          
-          {/** Display loading skeletons while data is being fetched */}
-          {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 [@media(min-width:2920px)]:grid-cols-8 gap-6">
-              {[...Array(24)].map((_, i) => (
-                <div
-                  key={i}
-                  className="border rounded-xl p-4 shadow-sm space-y-3"
-                >
-                  <Skeleton className="h-60 w-full rounded-lg" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-              {/** Display filtered products */}
-              {filteredProducts.map((product) => (
-                console.log(product),
+    return (
+        <AppShell breadcrumbs={[{ label: "Inicio", to: "/" }, { label: "Catálogo" }]}>
+            <PageHeader
+                title="Catálogo"
+                description={
+                    products ? (
+                        <span className="animate-in fade-in duration-500">
+                            {products.length} productos de {companies.length} tiendas. Última lectura de precios: {formatDate(lastRead)}.
+                        </span>
+                    ) : loading ? (
+                        <Skeleton className="mt-1 h-4 w-80 max-w-full" />
+                    ) : null
+                }
+            />
 
-                <div
-                  key={product.id}
-                  // Navigate to product details on click
-                  onClick={() => navigate(`/product?id=${product.id}`)}
-                  className="cursor-pointer bg-gray-100 dark:bg-neutral-900 rounded-xl border shadow-sm p-4 transition hover:scale-[1.02] hover:shadow-lg"
-                >
-                  <div className="aspect-square overflow-hidden rounded-lg mb-3">
-                    <img
-                      src={product.product_img_url}
-                      alt={product.name}
-                      className="object-cover w-full h-full transition-transform hover:scale-105"
-                    />
-                  </div>
-                  <h2 className="text-lg font-semibold truncate">
-                    {product.name}
-                  </h2>
-                  <div className="flex justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500 mt-1">Desde:</p>
-                      <p className="text-lg font-medium">{product.price / 100}  €</p>
-
+            {/* Con cuatro tiendas los filtros no caben junto al buscador: el buscador va en su propia fila */}
+            <div className="flex flex-col gap-3">
+                <div className="w-full max-w-xl">
+                    <label htmlFor="catalog-search" className="mb-1.5 block text-sm font-semibold">Buscar</label>
+                    <div className="relative">
+                        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                        <Input
+                            id="catalog-search"
+                            type="search"
+                            placeholder="Nombre o materia activa"
+                            className="h-11 bg-card pl-9 text-base"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
-                    {
-                      // Display percentage change badge with appropriate color and arrow
-                      product.percentage_change > 0 ? (
-                        <Badge variant="default" className="h-6 w-12 self-end flex items-center justify-center bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-md text-xs">
-                          ↓ {product.percentage_change}%
-                        </Badge>
-                      ) : product.percentage_change < 0 ? (
-                        <Badge variant="default" className="h-6 w-12 self-end flex items-center justify-center bg-green-200 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-md text-xs">
-                         ↑ {product.percentage_change}%
-                        </Badge>
-                      ) : (
-                        <Badge variant="default" className="h-6 w-12 self-end flex items-center justify-center bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-gray-200 rounded-md text-xs">
-                         = {product.percentage_change}%
-                        </Badge>
-                      )
-                    }
-                  </div>
                 </div>
-              ))}
+                <div className="flex flex-wrap items-end gap-3">
+                    <div>
+                        <p id="shop-filter" className="mb-1.5 text-sm font-semibold">Tienda</p>
+                        <div role="group" aria-labelledby="shop-filter" className="flex h-11 items-center gap-1 rounded-md border bg-card p-1">
+                            {[null, ...companies].map((name) => (
+                                <button
+                                    key={name ?? "all"}
+                                    type="button"
+                                    aria-pressed={company === name}
+                                    onClick={() => setCompany(name)}
+                                    className={cn(
+                                        "h-full rounded-sm px-3 text-sm font-semibold transition-colors",
+                                        company === name ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                                    )}
+                                >
+                                    {name ?? "Todas"}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div>
+                        <p className="mb-1.5 text-sm font-semibold" id="type-label">Tipo</p>
+                        <Select value={type ?? ALL_TYPES} onValueChange={(value) => setType(value === ALL_TYPES ? null : value)}>
+                            <SelectTrigger className="h-11 w-[250px] bg-card text-base data-[size=default]:h-11" aria-labelledby="type-label">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={ALL_TYPES}>Todos los tipos</SelectItem>
+                                {types.map(([name, count]) => (
+                                    <SelectItem key={name} value={name}>
+                                        {name} <span className="text-muted-foreground">({count})</span>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <p className="mb-1.5 text-sm font-semibold" id="sort-label">Ordenar</p>
+                        <Select value={sort} onValueChange={(value) => setSort(value as SortKey)}>
+                            <SelectTrigger className="h-11 w-[250px] bg-card text-base data-[size=default]:h-11" aria-labelledby="sort-label">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {sortOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
             </div>
-          )}
-        </section>
-      </SidebarInset>
-    </SidebarProvider>
-  );
+
+            <div className="overflow-hidden rounded-lg border bg-card">
+                <div className="flex items-baseline justify-between border-b-2 border-foreground px-4 py-2.5 text-sm font-semibold sm:px-5">
+                    <span>{filtering && products ? `${visibleProducts.length} de ${products.length} productos` : "Producto"}</span>
+                    <span>Último precio</span>
+                </div>
+
+                {error ? (
+                    <div className="px-5 py-12 text-center">
+                        <p className="font-semibold">No se ha podido cargar el catálogo.</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Comprueba que la API está en marcha y recarga la página. ({error})</p>
+                    </div>
+                ) : loading ? (
+                    <ProductListSkeleton rows={8} label="Cargando el catálogo" />
+                ) : visibleProducts.length === 0 ? (
+                    <div className="flex flex-col items-center gap-3 px-5 py-14 text-center">
+                        <p className="font-semibold">Ningún producto coincide con la búsqueda.</p>
+                        <p className="max-w-[48ch] text-sm text-muted-foreground">Prueba con la materia activa (cobre, azufre…) o quita los filtros de tienda y tipo.</p>
+                        <Button variant="outline" onClick={() => { setParams({}, { replace: true }); setCompany(null); }}>Quitar filtros</Button>
+                    </div>
+                ) : (
+                    // Al cambiar tienda, tipo u orden la lista vuelve a entrar escalonada (al escribir no, para no marear)
+                    <ul key={`${company}|${type}|${sort}`} className="stagger divide-y">
+                        {visibleProducts.map((product) => (
+                            <li key={product.id}>
+                                <ProductRow product={product} />
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </AppShell>
+    );
 }

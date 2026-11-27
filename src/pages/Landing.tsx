@@ -1,31 +1,25 @@
 /**
- *  Landing Page 
+ * Landing page
  */
 
-
-import Header from "../components/Header";
-import Hero from "../components/Hero";
-import Background from "../components/Background";
-import Problems from "../components/Problems";
-import Characteristics from "../components/Characteristics";
-import LandingFooter from "../components/LandingFooter";
-import LandingInfo from "../components/LandingInfo";
-import Contact from "../components/Contact";
+import Header from "@/components/Header";
+import Hero from "@/components/Hero";
+import HowItWorks from "@/components/HowItWorks";
+import Shops from "@/components/Shops";
+import Contact from "@/components/Contact";
+import LandingFooter from "@/components/LandingFooter";
 
 export default function Landing() {
     return (
-        <>
-            <Background />
+        <div className="min-h-screen overflow-x-clip">
             <Header />
-            <main className="relative min-h-screen flex flex-col p-4 mx-auto lg:max-w-2/3 items-center">
+            <main>
                 <Hero />
-                <Problems />
-                <Characteristics />
-                <LandingInfo />
+                <HowItWorks />
+                <Shops />
                 <Contact />
-                <LandingFooter />
             </main>
-
-        </>
-    )
+            <LandingFooter />
+        </div>
+    );
 }

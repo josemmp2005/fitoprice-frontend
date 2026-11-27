@@ -1,158 +1,101 @@
 /**
- *  Products Panel Page
- * 
- *  This component displays a panel with a list of products fetched from the API.
- *  It includes a search input to filter products by name.
+ * Listado de productos del panel de administración, con búsqueda.
  */
 
-import { useEffect, useState } from "react";
-import API_BASE_URL from "@/config/api";
-import {
-    Table,
-    TableBody,
-    // TableCaption,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from "@/components/ui/table";
-
-
-import { AppSidebar } from "@/components/app-sidebar";
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-    SidebarInset,
-    SidebarProvider,
-    SidebarTrigger,
-} from "@/components/ui/sidebar";
-// import { Skeleton } from "@/components/ui/skeleton";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { ExternalLink, Search } from "lucide-react";
+import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
+import Price from "@/components/Price";
+import PriceChange from "@/components/PriceChange";
+import ProductImage from "@/components/ProductImage";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-
-
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useApi } from "@/hooks/useApi";
+import type { Product } from "@/lib/types";
+import { formatDate } from "@/lib/utils";
 
 export default function ProductsPanel() {
+    const { data: products, loading } = useApi<Product[]>("/products/all");
+    const [searchTerm, setSearchTerm] = useState("");
 
-    // Define the Product interface to type the product data
-    interface Product {
-        id: number;
-        name: string;
-        brand: string | null;
-        category: string | null;
-        unit: string | null;
-        created_at: string;
-        product_img_url: string;
-        price: number;
-        percentage_change: number;
-        scraped_at: string;
-        product_link: string;
-        company_id: number;
-        company_name: string;
-        company_website: string;
-    }
-
-    const [products, setProducts] = useState<Product[]>([]);
-    const [searchTerm, setSearchTerm] = useState<string>("");
-
-
-    useEffect(() => {
-        getAllProducts();
-    }, []);
-
-    // Function to fetch all products from the API
-    const getAllProducts = async () => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/products/all`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-            const data = await response.json();
-            setProducts(data);
-        } catch (error) {
-            console.error("Error fetching products:", error);
-        }
-    }
-
-    // Filter products based on the search term
-    const filteredProducts = products.filter((product) =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
+    const filteredProducts = useMemo(() => {
+        const term = searchTerm.trim().toLowerCase();
+        return (products ?? []).filter((product) => product.name.toLowerCase().includes(term));
+    }, [products, searchTerm]);
 
     return (
-        <>
-            <SidebarProvider>
-                <AppSidebar />
-                <SidebarInset>
-                    <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-                        <SidebarTrigger className="-ml-1" />
-                        <Separator
-                            orientation="vertical"
-                            className="mr-2 data-[orientation=vertical]:h-4"
-                        />
-                        <Breadcrumb>
-                            <BreadcrumbList>
-                                <BreadcrumbItem className="hidden md:block">
-                                    <BreadcrumbLink href="/">Inicio</BreadcrumbLink>
-                                </BreadcrumbItem>
-                                <BreadcrumbSeparator className="hidden md:block" />
-                                <BreadcrumbItem className="hidden md:block">
-                                    <BreadcrumbLink href="/admin/dashboard">Admin</BreadcrumbLink>
-                                </BreadcrumbItem>
-                                <BreadcrumbSeparator className="hidden md:block" />
-                                <BreadcrumbItem>
-                                    <BreadcrumbPage>Productos</BreadcrumbPage>
-                                </BreadcrumbItem>
-                            </BreadcrumbList>
-                        </Breadcrumb>
-                    </header>
-
-                    <section className="p-8">
-
-                        <h1 className="text-2xl font-bold">Products Panel</h1>
-
+        <AppShell breadcrumbs={[{ label: "Admin", to: "/admin/dashboard" }, { label: "Productos" }]}>
+            <PageHeader
+                title="Productos"
+                description={products ? `${filteredProducts.length} de ${products.length} productos` : "Cargando…"}
+                actions={
+                    <div className="relative w-full sm:w-72">
+                        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                            type="text"
-                            className="border mt-8 border-gray-300 dark:border-neutral-700 bg-transparent p-2 rounded-lg mb-6 w-full md:w-1/2 focus:outline-none focus:ring-2 focus:ring-primary"
-                            placeholder="Buscar productos..."
+                            type="search"
+                            aria-label="Buscar productos"
+                            placeholder="Buscar productos…"
+                            className="bg-card pl-9"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
+                    </div>
+                }
+            />
 
-                        <div>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Product ID</TableHead>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Company</TableHead>
-                                        <TableHead>Image URL</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredProducts.map((product: any) => (
-                                        <TableRow key={product.id}>
-                                            <TableCell>{product.id}</TableCell>
-                                            <TableCell className="transition-colors hover:bg-muted/50 cursor-pointer" onClick={() => window.open(product.company_website, '_blank', 'noopener,noreferrer')}>{product.company_name}</TableCell>
-                                            <TableCell><a href={product.product_img_url}>{product.product_img_url}</a></TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </section>
-                </SidebarInset>
-            </SidebarProvider>
-        </>
-    )
+            <Card className="py-0">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                            <TableHead className="w-16 pl-4">ID</TableHead>
+                            <TableHead>Producto</TableHead>
+                            <TableHead className="hidden md:table-cell">Tienda</TableHead>
+                            <TableHead className="text-right">Precio</TableHead>
+                            <TableHead className="hidden lg:table-cell">Leído</TableHead>
+                            <TableHead className="w-12 pr-4"><span className="sr-only">Enlace</span></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {loading
+                            ? Array.from({ length: 8 }, (_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell colSpan={6} className="px-4"><Skeleton className="h-9 w-full" /></TableCell>
+                                </TableRow>
+                            ))
+                            : filteredProducts.map((product) => (
+                                <TableRow key={product.id}>
+                                    <TableCell className="pl-4 text-sm text-muted-foreground tabular-nums">{product.id}</TableCell>
+                                    <TableCell>
+                                        <Link to={`/product?id=${product.id}`} className="flex items-center gap-3 hover:underline">
+                                            <ProductImage src={product.product_img_url} alt="" className="size-9 shrink-0 rounded-sm border" />
+                                            <span className="max-w-[320px] truncate font-semibold">{product.name}</span>
+                                        </Link>
+                                    </TableCell>
+                                    <TableCell className="hidden text-muted-foreground md:table-cell">{product.company_name ?? "—"}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex items-center justify-end gap-2">
+                                            <PriceChange value={product.percentage_change} />
+                                            <Price cents={product.price} className="text-xl" />
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="hidden text-muted-foreground lg:table-cell">{formatDate(product.scraped_at)}</TableCell>
+                                    <TableCell className="pr-4">
+                                        {product.product_link && (
+                                            <Button asChild variant="ghost" size="icon-sm" aria-label="Abrir en la tienda">
+                                                <a href={product.product_link} target="_blank" rel="noopener noreferrer"><ExternalLink /></a>
+                                            </Button>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                    </TableBody>
+                </Table>
+            </Card>
+        </AppShell>
+    );
 }
-

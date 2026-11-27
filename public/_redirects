@@ -1,0 +1,2 @@
+# React Router: cualquier ruta (/dashboard, /product?id=…) la resuelve index.html
+/*    /index.html   200

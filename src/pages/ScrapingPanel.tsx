@@ -1,485 +1,292 @@
 /**
- * Scraping Panel Page
- *  This component displays a panel for managing scraping jobs for companies.
+ * Páginas que se raspan de cada tienda y los selectores CSS para leerlas.
+ * Las lee el workflow de n8n (cada día a las 7:00) y también `npm run scrape` del backend.
  */
 
-import { useState, useEffect } from "react";
-import API_BASE_URL from "../config/api";
-import { AppSidebar } from "@/components/app-sidebar";
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-    SidebarInset,
-    SidebarProvider,
-    SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-    Table,
-    TableBody,
-    // TableCaption,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from "@/components/ui/table";
+import { useState } from "react";
+import { ExternalLink, Loader2, Pencil, Plus } from "lucide-react";
+import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-    Sheet,
-    SheetClose,
-    SheetContent,
-    SheetDescription,
-    SheetFooter,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-} from "@/components/ui/sheet"
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import API_BASE_URL from "@/config/api";
+import { getToken } from "@/config/auth";
+import { useApi } from "@/hooks/useApi";
+import type { Company, CompanyUrl, CompanyWithUrls } from "@/lib/types";
 
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectLabel,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
+interface JobForm {
+    url: string;
+    selector_card: string;
+    selector_title: string;
+    selector_price: string;
+    selector_image: string;
+    selector_link: string;
+}
 
-export default function CompaniesPanel() {
-    // Retrieve auth token from localStorage
-    const _storedAuth = localStorage.getItem("sb-uoagestcrprxatymjzwe-auth-token");
-    let token: string | null = null;
-    try {
-        if (_storedAuth) {
-            const parsed = JSON.parse(_storedAuth);
-            token = parsed?.access_token ?? null;
-        }
-    } catch (err) {
-        console.error("No se pudo parsear el auth token desde localStorage:", err);
-        token = null;
-    }
+const emptyForm: JobForm = { url: "", selector_card: "", selector_title: "", selector_price: "", selector_image: "", selector_link: "" };
 
-    const [scrapedCompanies, setScrapedCompanies] = useState([]);
-    const [companies, setCompanies] = useState([]);
-    const [urlScrap, setUrlScrap] = useState("");
-    const [nameSelector, setNameSelector] = useState("");
-    const [priceSelector, setPriceSelector] = useState("");
-    const [imgSelector, setImgSelector] = useState("");
-    const [linkSelector, setLinkSelector] = useState("");
-    const [selectedCompany, setSelectedCompany] = useState<any>(null);
-    const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-    const [activeStates, setActiveStates] = useState<Record<string, boolean>>({});
-    const [selectedUrlId, setSelectedUrlId] = useState<string | null>(null);
+const selectorFields: { key: keyof JobForm; label: string; placeholder: string; hint?: string }[] = [
+    { key: "selector_card", label: "Ficha de producto", placeholder: ".product-miniature", hint: "El bloque de cada producto en el listado. Los demás selectores se buscan dentro de él." },
+    { key: "selector_title", label: "Nombre", placeholder: ".product-title" },
+    { key: "selector_price", label: "Precio", placeholder: ".price" },
+    { key: "selector_image", label: "Imagen", placeholder: ".product-thumbnail img" },
+    { key: "selector_link", label: "Enlace", placeholder: ".product-title a" },
+];
 
-    // function to handle opening the sheet and setting the selected company and url config. Giving company and urlObj as parameters
-    const handleOpenSheet = (company: any, urlObj: any) => {
-        setSelectedCompany(company); // Set selected company
-        const config = urlObj.scraping_config; // Get scraping config
-        // Set form fields with existing config values
-        setUrlScrap(config?.url || ""); 
-        setNameSelector(config?.selector_title || "");
-        setPriceSelector(config?.selector_price || "");
-        setImgSelector(config?.selector_image || "");
-        setLinkSelector(config?.selector_link || "");
-        // initialize local active state for this url so switch is controlled
-        setActiveStates(prev => ({ ...prev, [String(urlObj.id)]: Boolean(urlObj.active) }));
-        setSelectedUrlId(String(urlObj.id));
-    };
+async function sendJob(path: string, method: "POST" | "PUT", body: object) {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+        method,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error(`Error ${response.status}`);
+}
 
-    // Function to create new scraping configuration
-    async function createNewScrapingConf() {
-        try {
-            const response = await fetch(`${API_BASE_URL}/scraping/scraping-job`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    company_id: parseInt(selectedCompanyId),
-                    url: urlScrap,
-                    selector_title: nameSelector,
-                    selector_price: priceSelector,
-                    selector_image: imgSelector,
-                    selector_link: linkSelector,
-                }),
-            });
-            if (!response.ok) throw new Error("Error creating scraping job");
-        } catch (error) {
-            console.error("Error creating scraping job:", error);
-        }
-    }
-
-    // Function to handle form submission for creating a new scraping configuration using the Dialog UI component
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedCompanyId) return;
-
-        // Call the funciton previously defined to create the scraping configuration
-        await createNewScrapingConf();
-
-        // Reset form fields
-        setSelectedCompanyId("");
-        setUrlScrap("");
-        setNameSelector("");
-        setPriceSelector("");
-        setImgSelector("");
-        setLinkSelector("");
-
-        // Reload the page to reflect new scraping job
-        window.location.reload();
-    }
-
-    // Function to handle form submission for updating an existing scraping configuration using the Sheet UI component
-    const handleSubmitUpdate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedCompany || !selectedUrlId) return;
-        
-        // Update scraping configuration
-        try {
-            const response = await fetch(`${API_BASE_URL}/scraping/scraping-job/${selectedUrlId}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    url: urlScrap,
-                    selector_title: nameSelector,
-                    selector_price: priceSelector,
-                    selector_image: imgSelector,
-                    selector_link: linkSelector,
-                    active: activeStates[selectedUrlId],
-                }),
-            });
-            if (!response.ok) throw new Error("Error updating scraping config");
-            
-            // Reload the page to reflect updated scraping job
-            window.location.reload();
-        } catch (error) {
-            console.error("Error updating scraping config:", error);
-        }
-    }
-
-    // Function to fetch companies with scraping configuration
-    const getCompaniesConf = async (): Promise<void> => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/companies/scraping-config`, {
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`,
-                },
-            });
-            if (!response.ok) {
-                throw new Error("Failed to fetch companies");
-            }
-            const data = await response.json();
-            setScrapedCompanies(data);
-        } catch (error) {
-            console.error("Error fetching companies:", error);
-        }
-    };
-
-    // Function to fetch all companies
-    const getCompanies = async (): Promise<void> => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/companies/all`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-            const data = await response.json();
-            setCompanies(data);
-        } catch (error) {
-            console.error("Error fetching companies:", error);
-        }
-    }
-
-    // Fetch companies and their scraping configurations on component mount 
-    useEffect(() => {
-        getCompaniesConf();
-        getCompanies();
-    }, []);
+// Campos de URL y selectores, compartidos por el alta y la edición
+function JobFields({ form, onChange }: { form: JobForm; onChange: (form: JobForm) => void }) {
+    const set = (key: keyof JobForm) => (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...form, [key]: e.target.value });
 
     return (
         <>
-            <SidebarProvider>
-                <AppSidebar />
-                <SidebarInset>
-                    <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-                        <SidebarTrigger className="-ml-1" />
-                        <Separator
-                            orientation="vertical"
-                            className="mr-2 data-[orientation=vertical]:h-4"
-                        />
-                        <Breadcrumb>
-                            <BreadcrumbList>
-                                <BreadcrumbItem className="hidden md:block">
-                                    <BreadcrumbLink href="/">Inicio</BreadcrumbLink>
-                                </BreadcrumbItem>
-                                <BreadcrumbSeparator className="hidden md:block" />
-                                <BreadcrumbItem className="hidden md:block">
-                                    <BreadcrumbLink href="/admin/dashboard">Admin</BreadcrumbLink>
-                                </BreadcrumbItem>
-                                <BreadcrumbSeparator className="hidden md:block" />
-                                <BreadcrumbItem>
-                                    <BreadcrumbPage>Empresas</BreadcrumbPage>
-                                </BreadcrumbItem>
-                            </BreadcrumbList>
-                        </Breadcrumb>
-                    </header>
-
-                    <section className="p-8">
-                        <h2 className="text-2xl font-bold p-4">Tareas de Scraping</h2>
-                        {/* Dialog for adding new scraping job */}
-                        <Dialog>
-                            <form>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" className="mb-5">Add Scraping</Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-[425px]">
-                                    <DialogHeader>
-                                        <DialogTitle>Añadir tarea de scraping</DialogTitle>
-                                        <DialogDescription>
-                                            Añade nuevas tareas de scraping aquí.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="grid gap-4">
-                                        <div className="grid gap-3">
-                                            <Label htmlFor="name-1">Empresa</Label>
-                                            {/* Select company for scraping task */}
-                                            <Select onValueChange={(value) => setSelectedCompanyId(value)} value={selectedCompanyId}>
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Selecciona una empresa" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectGroup>
-                                                        <SelectLabel>Empresas</SelectLabel>
-                                                        {companies.map((company: any) => (
-                                                            <SelectItem key={company.id} value={company.id.toString()}>
-                                                                {company.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectGroup>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="grid gap-3">
-                                            <Label htmlFor="url-input">Url</Label>
-                                            <Input
-                                                id="url-input"
-                                                placeholder="http://example.com"
-                                                value={urlScrap}
-                                                onChange={(e) => setUrlScrap(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="grid gap-3">
-                                            <Label htmlFor="name-selector-input">Selector Nombre</Label>
-                                            <Input
-                                                id="name-selector-input"
-                                                placeholder=".name"
-                                                value={nameSelector}
-                                                onChange={(e) => setNameSelector(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="grid gap-3">
-                                            <Label htmlFor="price-selector-input">Selector Precio</Label>
-                                            <Input
-                                                id="price-selector-input"
-                                                placeholder=".price"
-                                                value={priceSelector}
-                                                onChange={(e) => setPriceSelector(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="grid gap-3">
-                                            <Label htmlFor="img-selector-input">Selector Img</Label>
-                                            <Input
-                                                id="img-selector-input"
-                                                placeholder=".img"
-                                                value={imgSelector}
-                                                onChange={(e) => setImgSelector(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="grid gap-3">
-                                            <Label htmlFor="link-selector-input">Selector Link</Label>
-                                            <Input
-                                                id="link-selector-input"
-                                                placeholder=".link"
-                                                value={linkSelector}
-                                                onChange={(e) => setLinkSelector(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <DialogClose asChild>
-                                            <Button variant="outline">Cancel</Button>
-                                        </DialogClose>
-                                        <Button type="submit" onClick={handleSubmit}>Save changes</Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </form>
-                        </Dialog>
-
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Empresa</TableHead>
-                                    <TableHead>URL</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                    <TableHead>Activa</TableHead>
-                                    <TableHead>Acciones</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {/* Display loading skeleton if no companies are loaded */}
-                                {scrapedCompanies.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={5}>
-                                            <Skeleton className="h-10 w-full mb-2" />
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    // Map through companies and their URLs to create table rows
-                                    scrapedCompanies.flatMap((company: any) =>
-                                        company.company_urls.length > 0
-                                         // If company has URLs, map through them 
-                                            ? company.company_urls.map((urlObj: any) => ( 
-                                                // Create a table row for each URL
-                                                <TableRow key={`${company.id}-${urlObj.id}`}>
-                                                    <TableCell className="font-medium">{company.name}</TableCell>
-                                                    <TableCell>
-                                                        <a
-                                                            href={urlObj.url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-blue-600 hover:underline dark:text-blue-400"
-                                                        >
-                                                            {urlObj.url}
-                                                        </a>
-                                                    </TableCell>
-                                                    <TableCell>{company.scrape_status || "Desconocido"}</TableCell>
-                                                    <TableCell>
-                                                        {/* Display active status with color coding */}
-                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${urlObj.active
-                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                                            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                                                            }`}>
-                                                            {urlObj.active ? '✓ Activa' : '✗ Inactiva'}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {/* Button to open sheet for editing scraping configuration */}
-                                                        <Sheet>
-                                                            <SheetTrigger asChild>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    onClick={() => handleOpenSheet(company, urlObj)}
-                                                                >
-                                                                    →
-                                                                </Button>
-                                                            </SheetTrigger>
-                                                            <SheetContent>
-                                                                <SheetHeader>
-                                                                    <SheetTitle>Configuración de Scraping - {selectedCompany?.name}</SheetTitle>
-                                                                    <SheetDescription>
-                                                                        Edita los selectores CSS para el scraping de esta empresa.
-                                                                    </SheetDescription>
-                                                                </SheetHeader>
-                                                                <div className="grid flex-1 auto-rows-min gap-6 px-4">
-                                                                    <div className="grid gap-3">
-                                                                        <Label htmlFor="name-selector">Selector de Nombre</Label>
-                                                                        <Input
-                                                                            id="name-selector"
-                                                                            placeholder=".product-name"
-                                                                            value={nameSelector}
-                                                                            onChange={(e) => setNameSelector(e.target.value)}
-                                                                        />
-                                                                    </div>
-                                                                    <div className="grid gap-3">
-                                                                        <Label htmlFor="price-selector">Selector de Precio</Label>
-                                                                        <Input
-                                                                            id="price-selector"
-                                                                            placeholder=".product-price"
-                                                                            value={priceSelector}
-                                                                            onChange={(e) => setPriceSelector(e.target.value)}
-
-                                                                        />
-                                                                    </div>
-                                                                    <div className="grid gap-3">
-                                                                        <Label htmlFor="img-selector">Selector de Imagen</Label>
-                                                                        <Input
-                                                                            id="img-selector"
-                                                                            placeholder=".product-img"
-                                                                            value={imgSelector}
-                                                                            onChange={(e) => setImgSelector(e.target.value)}
-
-                                                                        />
-                                                                    </div>
-                                                                    <div className="grid gap-3">
-                                                                        <Label htmlFor="link-selector">Selector de Link</Label>
-                                                                        <Input
-                                                                            id="link-selector"
-                                                                            placeholder=".product-link"
-                                                                            value={linkSelector}
-                                                                            onChange={(e) => setLinkSelector(e.target.value)}
-                                                                        />
-                                                                    </div>
-                                                                    <div className="flex items-center space-x-2">
-                                                                        {/* Switch to toggle active state */}
-                                                                        <Switch
-                                                                            id={`active-switch-${urlObj.id}`}
-                                                                            checked={activeStates[String(urlObj.id)] ?? Boolean(urlObj.active)}
-                                                                            onCheckedChange={(checked) => {
-                                                                                setActiveStates(prev => ({ ...prev, [String(urlObj.id)]: checked })); // Update local controlled state
-                                                                            }}
-                                                                        />
-                                                                        <Label htmlFor={`active-switch-${urlObj.id}`}>Activa</Label>
-                                                                    </div>
-
-                                                                </div>
-
-                                                                <SheetFooter>
-                                                                    <Button type="submit" onClick={handleSubmitUpdate}>Guardar cambios</Button>
-                                                                    <SheetClose asChild>
-                                                                        <Button variant="outline">Cerrar</Button>
-                                                                    </SheetClose>
-                                                                </SheetFooter>
-                                                            </SheetContent>
-                                                        </Sheet>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                            : [] // If no URLs, return empty array
-                                    )
-                                )}
-                            </TableBody>
-                        </Table>
-                    </section>
-                </SidebarInset>
-            </SidebarProvider>
+            <div className="grid gap-2">
+                <Label htmlFor="job-url">URL de la página</Label>
+                <Input id="job-url" type="url" placeholder="https://www.tienda.es/categoria" value={form.url} onChange={set("url")} required />
+            </div>
+            <fieldset className="grid gap-3">
+                <legend className="mb-1 text-sm font-medium">Selectores CSS</legend>
+                <div className="grid gap-3">
+                    {selectorFields.map((field) => (
+                        <div key={field.key} className="grid gap-1.5">
+                            <Label htmlFor={`job-${field.key}`} className="text-xs text-muted-foreground">{field.label}</Label>
+                            <Input id={`job-${field.key}`} className="font-mono text-xs" placeholder={field.placeholder} value={form[field.key]} onChange={set(field.key)} required aria-describedby={field.hint ? `job-${field.key}-hint` : undefined} />
+                            {field.hint && <p id={`job-${field.key}-hint`} className="text-xs text-muted-foreground">{field.hint}</p>}
+                        </div>
+                    ))}
+                </div>
+            </fieldset>
         </>
-    )
+    );
+}
 
+function NewJobDialog({ companies, onSaved }: { companies: Company[]; onSaved: () => void }) {
+    const [open, setOpen] = useState(false);
+    const [companyId, setCompanyId] = useState("");
+    const [form, setForm] = useState(emptyForm);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
 
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!companyId) return setError("Elige una tienda.");
+        setSaving(true);
+        setError("");
+        try {
+            await sendJob("/scraping/scraping-job", "POST", { company_id: Number(companyId), ...form });
+            setForm(emptyForm);
+            setCompanyId("");
+            setOpen(false);
+            onSaved();
+        } catch (err) {
+            setError(`No se ha podido guardar (${err instanceof Error ? err.message : "error desconocido"}).`);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button><Plus /> Nueva página</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+                <form onSubmit={handleSubmit} className="grid gap-5">
+                    <DialogHeader>
+                        <DialogTitle>Nueva página a raspar</DialogTitle>
+                        <DialogDescription>Indica la página del catálogo y cómo encontrar cada dato en su HTML.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-2">
+                        <Label>Tienda</Label>
+                        <Select value={companyId} onValueChange={setCompanyId}>
+                            <SelectTrigger className="w-full" aria-label="Tienda">
+                                <SelectValue placeholder="Selecciona una tienda" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {companies.map((company) => (
+                                    <SelectItem key={company.id} value={String(company.id)}>{company.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <JobFields form={form} onChange={setForm} />
+                    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline">Cancelar</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={saving}>{saving && <Loader2 className="animate-spin" />} Guardar</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+interface EditTarget {
+    companyName: string;
+    urlObj: CompanyUrl;
+}
+
+function EditJobSheet({ target, onClose, onSaved }: { target: EditTarget | null; onClose: () => void; onSaved: () => void }) {
+    const config = target?.urlObj.scraping_config;
+    const [form, setForm] = useState(emptyForm);
+    const [active, setActive] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
+    const [loadedId, setLoadedId] = useState<number | null>(null);
+
+    // Rellenar el formulario cada vez que se abre con otra página
+    if (target && target.urlObj.id !== loadedId) {
+        setLoadedId(target.urlObj.id);
+        setForm({
+            url: target.urlObj.url,
+            selector_card: config?.selector_card ?? "",
+            selector_title: config?.selector_title ?? "",
+            selector_price: config?.selector_price ?? "",
+            selector_image: config?.selector_image ?? "",
+            selector_link: config?.selector_link ?? "",
+        });
+        setActive(target.urlObj.active);
+        setError("");
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!target) return;
+        setSaving(true);
+        setError("");
+        try {
+            await sendJob(`/scraping/scraping-job/${target.urlObj.id}`, "PUT", { ...form, active });
+            onSaved();
+            onClose();
+        } catch (err) {
+            setError(`No se ha podido guardar (${err instanceof Error ? err.message : "error desconocido"}).`);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <Sheet open={target !== null} onOpenChange={(open) => !open && onClose()}>
+            <SheetContent className="sm:max-w-md">
+                <form onSubmit={handleSubmit} className="flex h-full flex-col">
+                    <SheetHeader>
+                        <SheetTitle>{target?.companyName}</SheetTitle>
+                        <SheetDescription>Edita la página y los selectores que se usan para leerla.</SheetDescription>
+                    </SheetHeader>
+                    <div className="grid flex-1 auto-rows-min gap-5 overflow-y-auto px-4">
+                        <JobFields form={form} onChange={setForm} />
+                        <div className="flex items-center justify-between rounded-lg border p-3">
+                            <div>
+                                <Label htmlFor="job-active">Activa</Label>
+                                <p className="text-xs text-muted-foreground">Si está desactivada, el scraping la salta.</p>
+                            </div>
+                            <Switch id="job-active" checked={active} onCheckedChange={setActive} />
+                        </div>
+                        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+                    </div>
+                    <SheetFooter>
+                        <Button type="submit" disabled={saving}>{saving && <Loader2 className="animate-spin" />} Guardar cambios</Button>
+                        <SheetClose asChild>
+                            <Button type="button" variant="outline">Cancelar</Button>
+                        </SheetClose>
+                    </SheetFooter>
+                </form>
+            </SheetContent>
+        </Sheet>
+    );
+}
+
+export default function ScrapingPanel() {
+    const { data: scrapedCompanies, loading, reload } = useApi<CompanyWithUrls[]>("/companies/scraping-config", { auth: true });
+    const { data: companies } = useApi<Company[]>("/companies/all");
+    const [editing, setEditing] = useState<EditTarget | null>(null);
+
+    const rows = (scrapedCompanies ?? []).flatMap((company) => company.company_urls.map((urlObj) => ({ company, urlObj })));
+
+    return (
+        <AppShell breadcrumbs={[{ label: "Admin", to: "/admin/dashboard" }, { label: "Scraping" }]}>
+            <PageHeader
+                title="Scraping"
+                description={
+                    <>
+                        Páginas que se leen de cada tienda. n8n las lee todos los días a las 7:00; para lanzar una lectura en otro momento, abre el workflow en n8n y ejecútalo.
+                    </>
+                }
+                actions={<NewJobDialog companies={companies ?? []} onSaved={reload} />}
+            />
+
+            <Card className="py-0">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                            <TableHead className="pl-4">Tienda</TableHead>
+                            <TableHead>Página</TableHead>
+                            <TableHead className="hidden lg:table-cell">Ficha de producto</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead className="w-12 pr-4"><span className="sr-only">Acciones</span></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {loading ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="px-4"><Skeleton className="h-9 w-full" /></TableCell>
+                            </TableRow>
+                        ) : rows.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">Todavía no hay páginas configuradas.</TableCell>
+                            </TableRow>
+                        ) : (
+                            rows.map(({ company, urlObj }) => (
+                                <TableRow key={urlObj.id}>
+                                    <TableCell className="pl-4 font-medium">{company.name}</TableCell>
+                                    <TableCell>
+                                        <a href={urlObj.url} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-[340px] items-center gap-1.5 text-muted-foreground hover:text-foreground hover:underline">
+                                            <span className="truncate">{urlObj.url.replace(/^https?:\/\/(www\.)?/, "")}</span>
+                                            <ExternalLink className="size-3.5 shrink-0" />
+                                        </a>
+                                    </TableCell>
+                                    <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">
+                                        {urlObj.scraping_config?.selector_card ?? <span className="text-destructive">Falta: n8n salta esta página</span>}
+                                    </TableCell>
+                                    <TableCell>
+                                        {urlObj.active ? (
+                                            <Badge className="bg-hoja/15 text-hoja">Activa</Badge>
+                                        ) : (
+                                            <Badge variant="secondary">Inactiva</Badge>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="pr-4">
+                                        <Button variant="ghost" size="icon-sm" aria-label={`Editar ${urlObj.url}`} onClick={() => setEditing({ companyName: company.name, urlObj })}>
+                                            <Pencil />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </Card>
+
+            <EditJobSheet target={editing} onClose={() => setEditing(null)} onSaved={reload} />
+        </AppShell>
+    );
 }
