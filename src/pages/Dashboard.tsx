@@ -9,6 +9,7 @@ import { useSearchParams } from "react-router-dom";
 import { Search } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
+import LoadError from "@/components/LoadError";
 import ProductListSkeleton from "@/components/ProductListSkeleton";
 import ProductRow from "@/components/ProductRow";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ const sorters: Record<SortKey, ((a: Product, b: Product) => number) | null> = {
 };
 
 export default function Dashboard() {
-    const { data: products, loading, error } = useApi<Product[]>("/products/all");
+    const { data: products, loading, error, reload } = useApi<Product[]>("/products/all");
     const [params, setParams] = useSearchParams();
     const searchTerm = params.get("q") ?? "";
     const type = params.get("tipo");
@@ -180,10 +181,7 @@ export default function Dashboard() {
                 </div>
 
                 {error ? (
-                    <div className="px-5 py-12 text-center">
-                        <p className="font-semibold">No se ha podido cargar el catálogo.</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Comprueba que la API está en marcha y recarga la página. ({error})</p>
-                    </div>
+                    <LoadError what="el catálogo" onRetry={reload} className="py-12" />
                 ) : loading ? (
                     <ProductListSkeleton rows={8} label="Cargando el catálogo" />
                 ) : visibleProducts.length === 0 ? (

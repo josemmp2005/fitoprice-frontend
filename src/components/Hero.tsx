@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
 import ProductRow from "@/components/ProductRow";
 import { Input } from "@/components/ui/input";
+import LoadError from "@/components/LoadError";
 import ProductListSkeleton from "@/components/ProductListSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApi } from "@/hooks/useApi";
@@ -18,7 +19,7 @@ const suggestions = ["Cobre", "Azufre", "Parafina", "Cipermetrina", "Aminoácido
 const MAX_RESULTS = 5;
 
 export default function Hero() {
-    const { data: products, loading, error } = useApi<Product[]>("/products/all");
+    const { data: products, loading, error, reload } = useApi<Product[]>("/products/all");
     const [query, setQuery] = useState("");
 
     const matches = useMemo(() => {
@@ -86,9 +87,7 @@ export default function Hero() {
 
                     <div className="mt-6 overflow-hidden rounded-lg border bg-card">
                         {error ? (
-                            <p className="px-5 py-10 text-center text-muted-foreground">
-                                No se han podido cargar los precios. Comprueba que la API y la base de datos están en marcha y recarga la página.
-                            </p>
+                            <LoadError what="los precios" onRetry={reload} />
                         ) : loading ? (
                             <ProductListSkeleton rows={MAX_RESULTS} />
                         ) : matches.length === 0 ? (

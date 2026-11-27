@@ -11,6 +11,14 @@ import API_BASE_URL from "@/config/api";
 import { getToken } from "@/config/auth";
 import { trackRequest } from "@/hooks/useLoading";
 
+class HttpError extends Error {
+    readonly status: number;
+    constructor(status: number, message: string) {
+        super(message);
+        this.status = status;
+    }
+}
+
 interface ApiState<T> {
     data: T | null;
     loading: boolean;
@@ -35,12 +43,16 @@ export function useApi<T>(path: string | null, { auth = false } = {}): ApiState<
 
         fetch(`${API_BASE_URL}${path}`, { headers, signal: controller.signal })
             .then(async (response) => {
-                if (!response.ok) throw new Error(`Error ${response.status} al cargar ${path}`);
+                if (!response.ok) throw new HttpError(response.status, `Error ${response.status} al cargar ${path}`);
                 setState({ data: (await response.json()) as T, loading: false, error: null });
             })
             .catch((error: unknown) => {
                 if (controller.signal.aborted) return;
-                setState({ data: null, loading: false, error: error instanceof Error ? error.message : "Error desconocido" });
+                const message = error instanceof Error ? error.message : "Error desconocido";
+                // El detalle técnico va a la consola; la interfaz enseña un mensaje para el usuario
+                // (componente LoadError). Un 404 es una respuesta normal (p. ej. producto sin registro).
+                if (!(error instanceof HttpError && error.status === 404)) console.error(`[API] ${path}:`, message);
+                setState({ data: null, loading: false, error: message });
             })
             .finally(finish);
 
