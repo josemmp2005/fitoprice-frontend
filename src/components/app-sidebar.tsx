@@ -1,177 +1,99 @@
-"use client"
+/**
+ * Barra lateral de la app. Los visitantes ven la parte pública;
+ * con sesión de administrador aparece además la sección de administración.
+ * No hay ningún enlace al login: es una ruta oculta (/login/admin).
+ */
 
-import * as React from "react"
+import * as React from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Bookmark, Bot, Building2, Home, LayoutDashboard, Package, Search, type LucideIcon } from "lucide-react";
+import Logo from "@/components/Logo";
+import { NavUser } from "@/components/ui/nav-user";
 import {
-  LayoutDashboard,
-  Building2,
-  Package,
-  Bot,
-  Search,
-  // ShoppingCart,
-  BarChart3,
-  // Users,
-  Home,
-} from "lucide-react"
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupLabel,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarRail,
+} from "@/components/ui/sidebar";
+import { getSession } from "@/config/auth";
 
-import { NavMain } from "@/components/ui/nav-main"
-// import { NavProjects } from "@/components/ui/nav-projects"
-import { NavUser } from "@/components/ui/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  // SidebarRail,
-} from "@/components/ui/sidebar"
-import { supabase } from "@/config/supabase"
-import type { Session } from "@supabase/supabase-js"
+interface NavItem {
+    title: string;
+    url: string;
+    icon: LucideIcon;
+    // Otras rutas que también marcan este enlace como activo
+    matches?: string[];
+}
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const [session, setSession] = React.useState<Session | null>(null)
+const publicNav: NavItem[] = [
+    { title: "Inicio", url: "/", icon: Home },
+    { title: "Catálogo", url: "/dashboard", icon: Search, matches: ["/product"] },
+    { title: "Tus productos", url: "/seguidos", icon: Bookmark },
+];
 
-  React.useEffect(() => {
-    // Obtener sesión inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-    })
+const adminNav: NavItem[] = [
+    { title: "Resumen", url: "/admin/dashboard", icon: LayoutDashboard },
+    { title: "Productos", url: "/admin/products", icon: Package },
+    { title: "Empresas", url: "/admin/companies", icon: Building2 },
+    { title: "Scraping", url: "/admin/scraping-jobs", icon: Bot },
+];
 
-    // Escuchar cambios en la autenticación
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
+function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
+    const { pathname } = useLocation();
 
-    return () => subscription.unsubscribe()
-  }, [])
+    return (
+        <SidebarGroup>
+            <SidebarGroupLabel>{label}</SidebarGroupLabel>
+            <SidebarMenu>
+                {items.map((item) => {
+                    const isActive = pathname === item.url || Boolean(item.matches?.some((path) => pathname.startsWith(path)));
+                    return (
+                        <SidebarMenuItem key={item.url}>
+                            {/* La página activa lleva una brizna verde a la izquierda, del color del logo */}
+                            <SidebarMenuButton
+                                asChild
+                                isActive={isActive}
+                                tooltip={item.title}
+                                className="relative before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:origin-center before:scale-y-0 before:rounded-full before:bg-brote before:transition-transform before:duration-300 before:ease-(--ease-asienta) data-[active=true]:before:scale-y-100"
+                            >
+                                <Link to={item.url}>
+                                    <item.icon />
+                                    <span>{item.title}</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    );
+                })}
+            </SidebarMenu>
+        </SidebarGroup>
+    );
+}
 
-  // Navegación para usuarios no autenticados
-  const publicNavMain = [
-    {
-      title: "Inicio",
-      url: "/",
-      icon: Home,
-      isActive: true,
-      items: [
-        {
-          title: "Inicio",
-          url: "/",
-        },
-      ]
-    },
-    {
-      title: "Buscar Productos",
-      url: "/dashboard",
-      icon: Search,
-      items: [
-        {
-          title: "Ver productos",
-          url: "/dashboard",
-        },
-      ]
-    },
-  ]
+export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
+    const session = getSession();
 
-  // Navegación completa para admins
-  const adminNavMain = [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: LayoutDashboard,
-      items: [
-        {
-          title: "dashboard",
-          url: "/dashboard",
-        },
-      ]
-    },
-    {
-      title: "Empresas",
-      url: "/admin/companies",
-      icon: Building2,
-      items: [
-        {
-          title: "Ver todas",
-          url: "/admin/companies",
-        },
-      ],
-    },
-    {
-      title: "Productos",
-      url: "/admin/products",
-      icon: Package,
-      items: [
-        {
-          title: "Ver todos",
-          url: "/admin/products",
-        },
-      ],
-    },
-    {
-      title: "Scraping",
-      url: "/admin/scraping-jobs",
-      icon: Bot,
-      items: [
-        {
-          title: "Jobs activos",
-          url: "/admin/scraping-jobs",
-        },
-      ],
-    },
-    {
-      title: "Análisis",
-      url: "/admin/analytics",
-      icon: BarChart3,
-      items: [
-        {
-          title: "Ver análisis",
-          url: "/admin/dashboard",
-        },
-      ],
-    },
-  ]
-
-
-  const userData = session
-    ? {
-        name: session.user.email?.split('@')[0] || "Admin User",
-        email: session.user.email || "admin@fitoprice.com",
-        avatar: session.user.user_metadata?.avatar_url || "/avatars/default.jpg",
-      }
-    : {
-        name: "Invitado",
-        email: "",
-        avatar: "/avatars/guest.jpg",
-      }
-
-  const teams = session
-    ? [
-        {
-          name: "FitoPrice Admin",
-          logo: LayoutDashboard,
-          plan: "Enterprise",
-        },
-      ]
-    : [
-        {
-          name: "FitoPrice",
-          logo: Home,
-          plan: "",
-        },
-      ]
-
-  return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        <TeamSwitcher teams={teams} />
-      </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={session ? adminNavMain : publicNavMain} />
-      </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={userData} />
-      </SidebarFooter>
-    </Sidebar>
-  )
+    return (
+        <Sidebar collapsible="icon" {...props}>
+            <SidebarHeader className="h-14 justify-center border-b border-sidebar-border px-4 group-data-[collapsible=icon]:px-2">
+                <Logo className="group-data-[collapsible=icon]:[&>span]:hidden" />
+            </SidebarHeader>
+            <SidebarContent>
+                <NavGroup label="Explorar" items={publicNav} />
+                {session && <NavGroup label="Administración" items={adminNav} />}
+            </SidebarContent>
+            {/* El acceso de administradores no se enlaza: se entra escribiendo la URL del login */}
+            {session && (
+                <SidebarFooter>
+                    <NavUser email={session.user.email} />
+                </SidebarFooter>
+            )}
+            <SidebarRail />
+        </Sidebar>
+    );
 }

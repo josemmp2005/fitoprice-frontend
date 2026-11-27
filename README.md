@@ -9,7 +9,7 @@ Desarrollada con **React**, **TypeScript**, **TailwindCSS** y **shadcn/ui**, ofr
 -  **React + Vite** — entorno rápido y modular para desarrollo frontend.  
 -  **TypeScript** — tipado estático y mayor robustez en el código.  
 -  **TailwindCSS + shadcn/ui** — diseño moderno y componentes reutilizables.  
--  **Supabase** — backend as a service (auth, base de datos, storage).  
+-  **API FitoPrice (Express + PostgreSQL)** — datos y autenticación con JWT.  
 -  **Netlify** — despliegue del frontend.
 
 ## URL 

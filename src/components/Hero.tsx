@@ -1,63 +1,119 @@
 /**
- * Hero component for the landing page with theme-aware image switching.
+ * Hero de la landing: la propia herramienta. Una pregunta, un buscador sobre el
+ * catálogo real y los resultados al momento.
  */
 
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { Search } from "lucide-react";
+import ProductRow from "@/components/ProductRow";
+import { Input } from "@/components/ui/input";
+import ProductListSkeleton from "@/components/ProductListSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useApi } from "@/hooks/useApi";
+import type { Product } from "@/lib/types";
+import { formatDate, normalize } from "@/lib/utils";
 
-import heroImg from '../assets/imgs/hero.png'; // Dark mode image
-import wHeroImg from '../assets/imgs/w-hero.png'; // Light mode image
-import { Button } from './ui/button'; // Component Button
-import { useNavigate } from 'react-router-dom'; // Navigation hook
-import { useEffect, useState } from 'react'; // React hooks
+const suggestions = ["Cobre", "Azufre", "Parafina", "Cipermetrina", "Aminoácidos", "Hierro"];
+const MAX_RESULTS = 5;
 
 export default function Hero() {
-    // Declare navigation and theme state
-    const navigate = useNavigate();
-    const [isDark, setIsDark] = useState(false);
+    const { data: products, loading, error } = useApi<Product[]>("/products/all");
+    const [query, setQuery] = useState("");
 
-    // Function to check current theme
-    const checkTheme = () => {
-        const isDarkMode = document.documentElement.classList.contains('dark');
-        setIsDark(isDarkMode);
-    };
+    const matches = useMemo(() => {
+        const term = normalize(query.trim());
+        if (!products) return [];
+        if (!term) return products;
+        return products.filter((p) => normalize(p.name).includes(term));
+    }, [products, query]);
 
+    const shops = useMemo(() => [...new Set((products ?? []).map((p) => p.company_name).filter((name): name is string => Boolean(name)))], [products]);
+    const lastRead = useMemo(
+        () => (products ?? []).reduce<string | null>((max, p) => (p.scraped_at && (!max || p.scraped_at > max) ? p.scraped_at : max), null),
+        [products],
+    );
 
-    useEffect(() => {
-        checkTheme();
-        
-        /**
-         *   Observe changes in the theme and update state accordingly
-         *   The observer monitors for changes in the document's class attribute, which indicates theme changes.
-         *   When a change is detected, the observer calls the checkTheme() function to update the isDark state without reloading the page, allowing the hero image to change on the fly.
-         */
-
-        const observer = new MutationObserver(checkTheme);
-        // Start observing the document element for class attribute changes
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ['class']
-        });
-
-        // Cleanup observer on component unmount
-        return () => observer.disconnect();
-    }, []);
+    const catalogLink = query.trim() ? `/dashboard?q=${encodeURIComponent(query.trim())}` : "/dashboard";
 
     return (
-        <section className="mt-10 sm:mt-50 [@media(min-width:2920px)]:mt-0 h-screen flex flex-col justify-center items-center gap-10">
-            <div className='max-w-xl mx-auto text-center'>
-                <h2 className="text-5xl font-bold mb-4 animate-fade-in-custom-duration-700">Compara Precios y Aumenta tu Rentabilidad </h2>
-                <p className="text-xl animate-fade-in-custom-delay-400 p-4">Compara precios en tiempo real, rastrea el mercado y toma decisiones rentables para cada cosecha.</p>
-                <div className="mt-6 space-x-4 animate-fade-in-custom-delay-800">
-                    {/* Buttons for navigation */}
-                    <Button className="text-xl mb-3 sm:mb-0" onClick={() => navigate('/dashboard')}>Comenzar</Button>
-                    <a href="#characteristics"><Button className="text-xl" >Más Información</Button></a>
+        <section className="pt-28 pb-16 md:pt-32 md:pb-24">
+            <div className="mx-auto max-w-6xl px-4 md:px-6">
+                <h1 className="headline max-w-[15ch] text-[clamp(3.25rem,8.5vw,7.5rem)]">¿Cuánto cuesta lo que vas a echar al campo?</h1>
+            </div>
+            <div className="mx-auto mt-10 grid max-w-6xl grid-cols-1 gap-10 px-4 md:px-6 lg:mt-14 lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] lg:gap-16">
+                <div className="space-y-5">
+                    <p className="max-w-[46ch] text-lg">
+                        FitoPrice lee los precios de fitosanitarios, abonos y correctores en tiendas online
+                        y te los enseña juntos, con la fecha en que se leyeron.
+                    </p>
+                    {products ? (
+                        <p className="animate-in fade-in text-sm text-muted-foreground duration-500">
+                            {products.length} productos de {new Intl.ListFormat("es", { type: "conjunction" }).format(shops)}. Última lectura: {formatDate(lastRead)}.
+                        </p>
+                    ) : loading ? (
+                        <Skeleton className="h-4 w-72 max-w-full" />
+                    ) : null}
+                </div>
+
+                <div className="min-w-0">
+                    <label htmlFor="hero-search" className="mb-2 block font-semibold">Busca un producto</label>
+                    <div className="relative">
+                        <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                        <Input
+                            id="hero-search"
+                            type="search"
+                            autoComplete="off"
+                            placeholder="Nombre o materia activa"
+                            className="h-14 rounded-lg border-2 bg-card pl-12 text-lg md:text-lg"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                        />
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">Prueba con</span>
+                        {suggestions.map((s) => (
+                            <button
+                                key={s}
+                                type="button"
+                                onClick={() => setQuery(s)}
+                                className="rounded-md border bg-card px-2.5 py-1 transition-colors hover:border-primary hover:text-primary"
+                            >
+                                {s}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="mt-6 overflow-hidden rounded-lg border bg-card">
+                        {error ? (
+                            <p className="px-5 py-10 text-center text-muted-foreground">
+                                No se han podido cargar los precios. Comprueba que la API y la base de datos están en marcha y recarga la página.
+                            </p>
+                        ) : loading ? (
+                            <ProductListSkeleton rows={MAX_RESULTS} />
+                        ) : matches.length === 0 ? (
+                            <p className="px-5 py-10 text-center text-muted-foreground">
+                                No hay ningún producto que contenga «{query}». Prueba con la materia activa o una palabra más corta.
+                            </p>
+                        ) : (
+                            <ul key={query} className="stagger divide-y" aria-live="polite">
+                                {matches.slice(0, MAX_RESULTS).map((product) => (
+                                    <li key={product.id}>
+                                        <ProductRow product={product} />
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        {!error && matches.length > 0 && (
+                            <Link to={catalogLink} className="block border-t bg-muted/50 px-5 py-3 text-sm font-semibold text-primary hover:bg-muted">
+                                {query.trim()
+                                    ? `Ver los ${matches.length} resultados en el catálogo`
+                                    : `Ver los ${matches.length} productos en el catálogo`}
+                            </Link>
+                        )}
+                    </div>
                 </div>
             </div>
-            {/* Hero Image with theme-aware switching */}
-            <img
-                src={isDark ? heroImg : wHeroImg}
-                alt="Hero"
-                className="mt-10 rounded-xl w-9/10 mx-auto [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_90%)] animate-fade-in-custom-delay-1200"
-            />
         </section>
-    )
+    );
 }

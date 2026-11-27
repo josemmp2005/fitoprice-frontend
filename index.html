@@ -1,24 +1,29 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>fitoprice</title>
+    <meta name="description" content="Compara precios de fitosanitarios, abonos y fertilizantes entre tiendas agrícolas y sigue su evolución." />
+    <title>FitoPrice: precios de fitosanitarios y abonos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400&family=Big+Shoulders:opsz,wght@10..72,600..900&family=Big+Shoulders+Stencil:opsz,wght@10..72,700..900&display=swap" rel="stylesheet" />
     <script>
-        // Detectar preferencia de modo oscuro del sistema
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.classList.add('dark');
-        }
-        // Escuchar cambios en la preferencia del sistema
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            if (e.matches) {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
-        });
+        // Tema antes del primer pintado: preferencia guardada o, si no hay, la del sistema
+        (function () {
+            var media = window.matchMedia('(prefers-color-scheme: dark)');
+            var apply = function (dark) { document.documentElement.classList.toggle('dark', dark); };
+            var stored = null;
+            try { stored = localStorage.getItem('theme'); } catch (e) {}
+            apply(stored ? stored === 'dark' : media.matches);
+            media.addEventListener('change', function (e) {
+                var saved = null;
+                try { saved = localStorage.getItem('theme'); } catch (err) {}
+                if (!saved) apply(e.matches);
+            });
+        })();
     </script>
 </head>
 
@@ -26,3 +31,5 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 </body>
+
+</html>

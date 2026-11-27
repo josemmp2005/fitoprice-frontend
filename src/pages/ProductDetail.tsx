@@ -1,512 +1,341 @@
 /**
- * Product Detail Page
- * 
- * This component displays detailed information about a specific product,
- * including its price history chart and a list of companies selling the product.
- * It fetches data from the API based on the product ID obtained from the URL query parameters.
+ * Ficha de producto: último precio y precio por litro o kilo, precio en cada tienda,
+ * calculadora del coste del tratamiento, evolución del precio y alternativas
+ * con la misma materia activa. El visitante puede seguir el producto (se guarda en su navegador).
+ * Si el producto está en el Registro Oficial de Productos Fitosanitarios, muestra sus usos autorizados.
  */
 
-"use client"
-import { useEffect, useState } from "react";
-import API_BASE_URL from "@/config/api";
-import {
-    Table,
-    TableBody,
-    TableCaption,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table"
-import { AppSidebar } from "@/components/app-sidebar";
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-    SidebarInset,
-    SidebarProvider,
-    SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { TrendingUp, Loader2 } from "lucide-react"
-import { CartesianGrid, Line, LineChart, XAxis } from "recharts"
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card"
-import {
-    type ChartConfig,
-    ChartContainer,
-    ChartTooltip,
-    ChartTooltipContent,
-} from "@/components/ui/chart"
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Bookmark, BookmarkCheck, ExternalLink } from "lucide-react";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import AppShell from "@/components/AppShell";
+import CostCalculator from "@/components/CostCalculator";
+import ProductRow from "@/components/ProductRow";
+import RegistrySection from "@/components/RegistrySection";
+import Price from "@/components/Price";
+import PriceChange from "@/components/PriceChange";
+import ProductImage from "@/components/ProductImage";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { useApi } from "@/hooks/useApi";
+import { useFollowed } from "@/hooks/useFollowed";
+import type { PriceHistoryItem, Product, ProductSeller, RegistryProduct } from "@/lib/types";
+import { cn, formatDate, formatPrice, formatQuantity, unitName } from "@/lib/utils";
 
-// Define the Product interface to type the product data
-interface Product {
-    id: number;
-    name: string;
-    brand: string | null;
-    category: string | null;
-    unit: string | null;
-    created_at: string;
-    product_img_url: string;
-    price: number;
-    percentage_change: number;
-    scraped_at: string;
-    product_link: string;
-    company_id: number;
-    company_name: string;
-    company_website: string;
-}
-
-// Define the ChartDataPoint interface for chart data points
-interface ChartDataPoint {
-    month: string;
-    desktop: number;
-}
-
-// Define the PriceHistoryItem interface for price history data
-interface PriceHistoryItem {
-    id: number;
-    product_id: number;
-    company_id: number;
-    price: number;
-    scraped_at: string;
-}
-
-// Define the CompanieSeller interface for companies selling the product
-interface CompanieSeller {
-    id: number;
-    name: string;
-    website: string;
-    product_link: string;
-    price: number;
-    scraped_at: string;
-}
-
-// Chart configuration
 const chartConfig = {
-    desktop: {
-        label: "Precio",
-        color: "var(--chart-1)",
-    },
-} satisfies ChartConfig
+    price: { label: "Precio", color: "var(--chart-1)" },
+} satisfies ChartConfig;
 
-// Mock data for the chart before real data is loaded
-const mockChartData: ChartDataPoint[] = [
-    { month: "Enero", desktop: 186 },
-    { month: "Febrero", desktop: 305 },
-    { month: "Marzo", desktop: 237 },
-    { month: "Abril", desktop: 173 },
-    { month: "Mayo", desktop: 209 },
-    { month: "Junio", desktop: 214 },
-]
+const shortDate = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short" });
 
-/**
- * Params: an PriceHistoryItems[] array whitch it've at least price and scraped_at
- * Output: ChartDataPoint[] array formatted for the chart whicth it've month and desktop(price)
- * Overview: This function transforms raw price history data into a format suitable for charting.
- * 
- * @param priceHistory 
- * @returns 
- */
-
-const setGraphicData = (priceHistory: PriceHistoryItem[]): ChartDataPoint[] => {
-    // Check if priceHistory is valid and has data
-    if (!priceHistory || priceHistory.length === 0) {
-        return mockChartData;
-    }
-
-    // Sort price history by scraped_at date in ascending order creating a new sorted array
-    const sortedHistory = [...priceHistory].sort((a, b) =>
-        new Date(a.scraped_at).getTime() - new Date(b.scraped_at).getTime()
+function PriceChart({ history }: { history: PriceHistoryItem[] }) {
+    const data = useMemo(
+        () =>
+            [...history]
+                .sort((a, b) => a.scraped_at.localeCompare(b.scraped_at))
+                .map((item) => ({ date: item.scraped_at, price: item.price / 100 })),
+        [history],
     );
 
-    // Map sorted history to chart data format
-    const chartData: ChartDataPoint[] = sortedHistory.map(item => {
-        const date = new Date(item.scraped_at);
-        // Format date to 'DD/MM HH:MM' in Spanish locale
-        const dateLabel = date.toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        // Round the price to two decimal places
-        return {
-            month: dateLabel,
-            desktop: Math.round((item.price / 100) * 100) / 100
-        };
-    });
-
-    return chartData;
-};
-
-export default function ProductDetail() {
-    const [product, setProduct] = useState<Product | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
-    const [lastPrice, setLastPrice] = useState<number | null>(null);
-    const [chartData, setChartData] = useState<ChartDataPoint[]>(mockChartData);
-    const productId = new URLSearchParams(window.location.search).get('id') || '';
-    const [companiesSellers, setCompaniesSellers] = useState<CompanieSeller[]>([]);
-
-    // Function to fetch product details
-    const getProduct = async (): Promise<void> => {
-        // Validate productId 
-        if (!productId) {
-            setError('No se proporcionó un ID de producto');
-            setLoading(false);
-            return;
-        }
-
-        // Fetch product data from the API
-        try {
-            setLoading(true);
-            const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: No se pudo cargar el producto`);
-            }
-
-            const data = await response.json();
-            setProduct(data[0] as Product);
-            setError(null);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-            console.error('Error fetching product:', err);
-            setError(errorMessage);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Function to fetch the last price of the product
-    const getLastPrice = async (): Promise<void> => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/products/${productId}/last-price`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: No se pudo cargar el último precio`);
-            }
-
-            const data = await response.json();
-            setLastPrice(data.price);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-            console.error('Error fetching last price:', err);
-            setError(errorMessage);
-        }
-    };
-
-    // Function to fetch historical prices of the product
-    const getHistoricalPrices = async (): Promise<void> => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/products/${productId}/price-history`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: No se pudo cargar los precios históricos`);
-            }
-
-            const data = await response.json();
-            const newChartData = setGraphicData(data);
-            setChartData(newChartData);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-            console.error('Error fetching historical prices:', err);
-            setError(errorMessage);
-        }
-    };
-
-    //  Function to fetch companies selling the product
-    const getCompaniesSellers = async (): Promise<void> => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/companies/${productId}/`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: No se pudo cargar las empresas vendedoras`);
-            }
-
-            const data = await response.json();
-            setCompaniesSellers(data);
-        }
-        catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-            console.error('Error fetching companies sellers:', err);
-            setError(errorMessage);
-        }
-    };
-
-    useEffect(() => {
-        getProduct();
-        getLastPrice();
-        getHistoricalPrices();
-        getCompaniesSellers();
-    }, [productId]);
-
-    // Render loading view if loading is true
-    if (loading) {
+    if (data.length < 2) {
         return (
-            <SidebarProvider>
-                <AppSidebar />
-                <SidebarInset>
-                    <div className="flex items-center justify-center h-screen">
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                        <span className="ml-2">Cargando producto...</span>
-                    </div>
-                </SidebarInset>
-            </SidebarProvider>
-        );
-    }
-
-    // Render error view if error is not null
-    if (error) {
-        return (
-            <SidebarProvider>
-                <AppSidebar />
-                <SidebarInset>
-                    <div className="flex flex-col items-center justify-center h-screen">
-                        <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-                        <p className="text-gray-600">{error}</p>
-                    </div>
-                </SidebarInset>
-            </SidebarProvider>
-        );
-    }
-
-    // Render product not found view if product is null
-    if (!product) {
-        return (
-            <SidebarProvider>
-                <AppSidebar />
-                <SidebarInset>
-                    <div className="flex flex-col items-center justify-center h-screen">
-                        <h2 className="text-2xl font-bold mb-4">Producto no encontrado</h2>
-                        <p className="text-gray-600">No se pudo encontrar el producto solicitado.</p>
-                    </div>
-                </SidebarInset>
-            </SidebarProvider>
+            <p className="max-w-[60ch] text-muted-foreground">
+                {data.length === 1
+                    ? `De momento solo hay una lectura, la del ${formatDate(data[0].date)}. La evolución aparecerá aquí a partir de la siguiente.`
+                    : "Todavía no se ha leído ningún precio de este producto."}
+            </p>
         );
     }
 
     return (
-        <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-                 <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-                    <SidebarTrigger className="-ml-1" />
-                    <Separator
-                        orientation="vertical"
-                        className="mr-2 data-[orientation=vertical]:h-4"
-                    />
-                    <Breadcrumb>
-                        <BreadcrumbList>
-                            <BreadcrumbItem className="hidden md:block">
-                                <BreadcrumbLink href="/">Inicio</BreadcrumbLink>
-                            </BreadcrumbItem>
-                            <BreadcrumbSeparator className="hidden md:block" />
-                            <BreadcrumbItem className="hidden md:block">
-                                <BreadcrumbLink href="/dashboard">Productos</BreadcrumbLink>
-                            </BreadcrumbItem>
-                            <BreadcrumbSeparator className="hidden md:block" />
-                            <BreadcrumbItem>
-                                <BreadcrumbPage>{product.name}</BreadcrumbPage>
-                            </BreadcrumbItem>
-                        </BreadcrumbList>
-                    </Breadcrumb>
-                </header>
+        <ChartContainer config={chartConfig} className="h-[260px] w-full">
+            <LineChart accessibilityLayer data={data} margin={{ left: 4, right: 12, top: 12, bottom: 4 }}>
+                <CartesianGrid vertical={false} strokeDasharray="2 4" />
+                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={24} tickFormatter={(v: string) => shortDate.format(new Date(v))} />
+                <YAxis tickLine={false} axisLine={false} width={68} tickFormatter={(v: number) => formatPrice(v * 100)} domain={["auto", "auto"]} />
+                <ChartTooltip
+                    cursor={{ strokeDasharray: "2 4" }}
+                    content={
+                        <ChartTooltipContent
+                            labelFormatter={(_, payload) => formatDate(payload?.[0]?.payload?.date, true)}
+                            formatter={(value) => <span className="font-semibold tabular-nums">{formatPrice(Number(value) * 100)}</span>}
+                        />
+                    }
+                />
+                <Line dataKey="price" type="stepAfter" stroke="var(--color-price)" strokeWidth={2.5} dot={{ r: 3, fill: "var(--color-price)" }} activeDot={{ r: 5 }} />
+            </LineChart>
+        </ChartContainer>
+    );
+}
 
-                <section className="p-8 space-y-8">
-                    <div className="space-y-2">
-                        <h1 className="text-4xl font-bold">{product.name}</h1>
-                        <div className="flex items-center gap-4 text-muted-foreground">
-                            <span className="text-sm">ID: {product.id}</span>
-                            <span className="text-3xl font-bold text-primary">
-                                {lastPrice !== null ? `${(lastPrice / 100).toFixed(2)} €` : 'Cargando...'}
-                            </span>
+function SellerTable({ sellers }: { sellers: ProductSeller[] }) {
+    if (sellers.length === 0) {
+        return <p className="text-muted-foreground">Ninguna tienda tiene ahora mismo un precio para este producto.</p>;
+    }
+
+    return (
+        <table className="w-full text-left">
+            <caption className="sr-only">Último precio en cada tienda, de más barato a más caro</caption>
+            <thead>
+                <tr className="border-b-2 border-foreground text-sm">
+                    <th scope="col" className="pb-2 font-semibold">Tienda</th>
+                    <th scope="col" className="hidden pb-2 font-semibold sm:table-cell">Leído</th>
+                    <th scope="col" className="pb-2 text-right font-semibold">Precio</th>
+                    <th scope="col" className="w-10 pb-2"><span className="sr-only">Enlace</span></th>
+                </tr>
+            </thead>
+            <tbody className="stagger divide-y">
+                {sellers.map((seller, index) => {
+                    const cheapest = index === 0 && sellers.length > 1;
+                    return (
+                        <tr key={seller.company_id}>
+                            <td className="py-3">
+                                <span className="font-bold">{seller.name}</span>
+                                {cheapest && <span className="ml-2 rounded-sm bg-best px-1.5 py-0.5 text-xs font-bold text-best-foreground">Más barato</span>}
+                            </td>
+                            <td className="hidden py-3 text-sm text-muted-foreground sm:table-cell">{formatDate(seller.scraped_at)}</td>
+                            <td className="py-3 text-right">
+                                <Price cents={seller.price} className={cn("text-2xl", cheapest && "bg-best px-1 text-best-foreground")} />
+                            </td>
+                            <td className="py-3 text-right">
+                                {seller.product_link && (
+                                    <Button asChild variant="ghost" size="icon-sm" aria-label={`Abrir en ${seller.name}`}>
+                                        <a href={seller.product_link} target="_blank" rel="noopener noreferrer"><ExternalLink /></a>
+                                    </Button>
+                                )}
+                            </td>
+                        </tr>
+                    );
+                })}
+            </tbody>
+        </table>
+    );
+}
+
+// ["Cobre", "Azufre"] -> "cobre o azufre"
+const listOr = (items: string[]) => {
+    const lower = items.map((i) => (i === "NPK" ? i : i.toLowerCase()));
+    return lower.length > 1 ? `${lower.slice(0, -1).join(", ")} o ${lower.at(-1)}` : lower[0];
+};
+
+// "Un 20 % más barato por litro" respecto al producto de la ficha
+function UnitComparison({ theirs, ours, unit }: { theirs: number; ours: number; unit: "L" | "kg" }) {
+    const diff = Math.round(((theirs - ours) / ours) * 100);
+    if (diff === 0) return <span className="text-muted-foreground">Mismo precio por {unitName(unit)}</span>;
+    return diff < 0
+        ? <span className="font-semibold text-price-down">Un {-diff} % más barato por {unitName(unit)}</span>
+        : <span className="text-price-up">Un {diff} % más caro por {unitName(unit)}</span>;
+}
+
+export default function ProductDetail() {
+    const [params] = useSearchParams();
+    const productId = params.get("id");
+    const valid = productId !== null && /^\d+$/.test(productId);
+
+    const { data: products, loading, error } = useApi<Product[]>(valid ? `/products/${productId}` : null);
+    const { data: history } = useApi<PriceHistoryItem[]>(valid ? `/products/${productId}/price-history` : null);
+    const { data: sellers } = useApi<ProductSeller[]>(valid ? `/companies/${productId}` : null);
+    const { data: alternatives } = useApi<Product[]>(valid ? `/products/${productId}/alternatives` : null);
+    // 404 si el producto no está enlazado con el registro oficial: entonces no se muestra la sección
+    const { data: registry } = useApi<RegistryProduct>(valid ? `/products/${productId}/registry` : null);
+    // Dosis que el visitante pasa del registro a la calculadora (n cambia la key para reiniciarla)
+    const [preset, setPreset] = useState<{ value: number; unit: string; n: number } | null>(null);
+    const calculatorRef = useRef<HTMLElement>(null);
+    useEffect(() => {
+        if (preset) calculatorRef.current?.scrollIntoView({ block: "start" });
+    }, [preset]);
+    const { isFollowed, toggle, markSeen } = useFollowed();
+    const [pops, setPops] = useState(0);
+    const product = products?.[0];
+    const following = product ? isFollowed(product.id) : false;
+    const packAmount = product?.pack_amount ? Number(product.pack_amount) : null;
+
+    // Si lo sigue, el precio de hoy pasa a ser la referencia de "Tus productos"
+    useEffect(() => {
+        if (product) markSeen(product);
+    }, [product, markSeen]);
+
+    const crumbs = [{ label: "Inicio", to: "/" }, { label: "Catálogo", to: "/dashboard" }, { label: product?.name ?? "Producto" }];
+
+    if (!valid || error || (!loading && !product)) {
+        return (
+            <AppShell breadcrumbs={crumbs}>
+                <div className="space-y-4 py-16">
+                    <h1 className="headline text-5xl">Este producto no está en el catálogo</h1>
+                    <p className="max-w-[60ch] text-muted-foreground">
+                        {error ? `No se ha podido cargar (${error}). Comprueba que la API está en marcha.` : "Puede que el enlace esté mal o que el producto se haya retirado."}
+                    </p>
+                    <Button asChild variant="outline">
+                        <Link to="/dashboard"><ArrowLeft /> Volver al catálogo</Link>
+                    </Button>
+                </div>
+            </AppShell>
+        );
+    }
+
+    return (
+        <AppShell breadcrumbs={crumbs}>
+            {loading || !product ? (
+                // Misma rejilla que la ficha: foto, nombre, precio, datos y botones
+                <div role="status" aria-label="Cargando el producto" className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,340px)_1fr] md:gap-12">
+                    <Skeleton className="aspect-square rounded-lg" />
+                    <div className="flex flex-col gap-5">
+                        <div className="space-y-3">
+                            <Skeleton className="h-12 w-11/12" />
+                            <Skeleton className="h-12 w-2/3" />
+                        </div>
+                        <Skeleton className="h-20 w-56" />
+                        <Skeleton className="h-4 w-72 max-w-full" />
+                        <Skeleton className="h-5 w-80 max-w-full" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-60" />
+                            <Skeleton className="h-4 w-44" />
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                            <Skeleton className="h-10 w-48" />
+                            <Skeleton className="h-10 w-44" />
                         </div>
                     </div>
+                </div>
+            ) : (
+                <>
+                    <article className="grid grid-cols-1 gap-8 animate-in fade-in duration-500 md:grid-cols-[minmax(0,340px)_1fr] md:gap-12">
+                        <ProductImage src={product.product_img_url} alt={product.name} className="aspect-square rounded-lg border" />
 
-                    <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-                        <Card className="xl:col-span-1 overflow-hidden flex flex-col">
-                            <CardContent className="flex items-center justify-center p-6 flex-1">
-                                <img
-                                    src={product.product_img_url}
-                                    alt={product.name}
-                                    className="w-full h-auto rounded-lg  object-contain max-h-[500px] transition-transform hover:scale-105"
-                                    onError={(e) => {
-                                        e.currentTarget.src = '/placeholder-product.png';
-                                    }}
-                                />
-                            </CardContent>
-                        </Card>
-
-                        {/* Graph with price evolution */}
-                        <div className="xl:col-span-3 space-y-6">
-                            <Card className="h-fit">
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <CardTitle>Evolución de Precios</CardTitle>
-                                            <CardDescription>Historial completo de precios ({chartData.length} registros)</CardDescription>
-                                        </div>
-                                        {
-                                            // Display percentage change with appropriate icon and color depending on its value
-                                            product.percentage_change > 0 ? (
-                                                <div className="flex items-center gap-2 text-sm font-medium text-green-600">
-                                                    <TrendingUp className="h-4 w-4" />
-                                                    <span>{product.percentage_change}%</span>
-                                                </div>
-                                            ) : product.percentage_change < 0 ? (
-                                                <div className="flex items-center gap-2 text-sm font-medium text-red-600">
-                                                    <TrendingUp className="h-4 w-4 rotate-180" />
-                                                    <span>{product.percentage_change}%</span>
-                                                </div>
-                                            ) : null
-                                        }
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                                        {/* Line chart displaying price evolution */}
-                                        <LineChart
-                                            accessibilityLayer
-                                            data={chartData}
-                                            margin={{
-                                                left: 12,
-                                                right: 12,
-                                                top: 12,
-                                                bottom: 12,
-                                            }}
-                                        >
-                                            <CartesianGrid
-                                                strokeDasharray="3 3"
-                                                vertical={false}
-                                                className="stroke-muted"
-                                            />
-                                            <XAxis
-                                                dataKey="month"
-                                                tickLine={false}
-                                                axisLine={false}
-                                                tickMargin={8}
-                                                angle={-45}
-                                                textAnchor="end"
-                                                height={80}
-                                                className="text-xs"
-                                            />
-                                            <ChartTooltip
-                                                cursor={{ strokeDasharray: '3 3' }}
-                                                content={<ChartTooltipContent
-                                                    hideLabel
-                                                    formatter={(value) => `${value} €`}
-                                                />}
-                                            />
-                                            <Line
-                                                dataKey="desktop"
-                                                type="monotone"
-                                                stroke="var(--color-desktop)"
-                                                strokeWidth={3}
-                                                dot={{
-                                                    fill: "var(--color-desktop)",
-                                                    r: 4,
-                                                }}
-                                                activeDot={{
-                                                    r: 6,
-                                                    fill: "var(--color-desktop)",
-                                                    stroke: "#fff",
-                                                    strokeWidth: 2,
-                                                }}
-                                            />
-                                        </LineChart>
-                                    </ChartContainer>
-                                </CardContent>
-                                <CardFooter className="flex-col items-start gap-2 text-sm border-t pt-4">
-                                    <div className="text-muted-foreground leading-none">
-                                        Mostrando todos los datos del historial de precios
-                                    </div>
-                                </CardFooter>
-                            </Card>
-
-                            {/* Invoices Table Card */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Proveedores</CardTitle>
-                                    <CardDescription>Registro de tus proveedores de <span className="font-semibold">{product.name}</span></CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableCaption className="text-xs">
-                                            Historial completo de compras del producto
-                                        </TableCaption>
-                                        <TableHeader>
-                                            <TableRow className="hover:bg-transparent">
-                                                <TableHead className="w-[120px] font-semibold">Empresa</TableHead>
-                                                <TableHead className="text-right font-semibold">Monto</TableHead>
-                                                <TableHead className="text-right font-semibold">Fecha</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {companiesSellers.map((companieSeller: CompanieSeller) => (
-                                                <TableRow
-                                                    key={companieSeller.id}
-                                                    className="transition-colors hover:bg-muted/50 cursor-pointer"
-                                                    onClick={() => window.open(companieSeller.product_link, '_blank', 'noopener,noreferrer')}
-                                                >
-                                                    <TableCell className="font-mono font-medium">
-                                                        <span className="hover:underline text-blue-600 dark:text-blue-400">
-                                                            {companieSeller.name}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell className="text-right font-semibold">
-                                                        {(companieSeller.price / 100).toFixed(2)} €
-                                                    </TableCell>
-                                                    <TableCell className="text-right text-muted-foreground">
-                                                        {new Date(companieSeller.scraped_at).toLocaleDateString('es-ES', {
-                                                            day: '2-digit',
-                                                            month: '2-digit',
-                                                            year: 'numeric',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        })}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
+                        <div className="flex flex-col gap-5">
+                            <h1 className="headline text-5xl md:text-6xl">{product.name}</h1>
+                            <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
+                                {/* El precio cae como un sello, el único momento llamativo de la ficha */}
+                                <Price cents={product.price} className="inline-block origin-bottom-left animate-stamp text-7xl [animation-delay:150ms] md:text-8xl" />
+                                <PriceChange value={product.percentage_change} className="mb-2 text-base" />
+                            </div>
+                            <p className="text-muted-foreground">
+                                En {product.company_name ?? "la tienda"}, leído el {formatDate(product.scraped_at, true)}.
+                            </p>
+                            {packAmount && product.unit && product.price_per_unit != null && (
+                                <p className="text-lg">
+                                    Envase de <strong>{formatQuantity(packAmount, product.unit)}</strong>:{" "}
+                                    <strong>{formatPrice(product.price_per_unit)}</strong> el {unitName(product.unit)}.
+                                </p>
+                            )}
+                            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+                                {product.category && (
+                                    <>
+                                        <dt className="text-muted-foreground">Tipo</dt>
+                                        <dd>
+                                            <Link to={`/dashboard?tipo=${encodeURIComponent(product.category)}`} className="font-semibold text-primary hover:underline">
+                                                {product.category}
+                                            </Link>
+                                        </dd>
+                                    </>
+                                )}
+                                {product.active_ingredients.length > 0 && (
+                                    <>
+                                        <dt className="text-muted-foreground">Contiene</dt>
+                                        <dd className="font-semibold">{product.active_ingredients.join(", ")}</dd>
+                                    </>
+                                )}
+                            </dl>
+                            <div className="flex flex-wrap gap-3">
+                                {product.product_link && (
+                                    <Button asChild size="lg">
+                                        <a href={product.product_link} target="_blank" rel="noopener noreferrer">
+                                            Abrir en {product.company_name ?? "la tienda"}
+                                            <ExternalLink aria-hidden />
+                                        </a>
+                                    </Button>
+                                )}
+                                <Button size="lg" variant="outline" aria-pressed={following} onClick={() => { toggle(product); setPops((n) => n + 1); }}>
+                                    {/* El icono da un salto al pulsar (no al cargar la ficha) */}
+                                    {following
+                                        ? <BookmarkCheck key={pops} className={cn("text-primary", pops > 0 && "animate-pop")} />
+                                        : <Bookmark key={pops} className={cn(pops > 0 && "animate-pop")} />}
+                                    {following ? "Siguiendo este precio" : "Seguir este precio"}
+                                </Button>
+                            </div>
+                            {following && (
+                                <p className="text-sm text-muted-foreground">
+                                    Lo verás en <Link to="/seguidos" className="font-semibold text-primary hover:underline">Tus productos</Link>, con lo que haya cambiado desde hoy.
+                                </p>
+                            )}
                         </div>
-                    </div>
-                </section>
-            </SidebarInset>
-        </SidebarProvider>
-    )
+                    </article>
+
+                    <section className="space-y-4 border-t pt-8">
+                        <h2 className="headline text-4xl">Precio en cada tienda</h2>
+                        {sellers ? (
+                            <SellerTable sellers={sellers} />
+                        ) : (
+                            <div role="status" aria-label="Cargando las tiendas" className="space-y-3">
+                                <Skeleton className="h-5 w-full" />
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                        )}
+                    </section>
+
+                    {registry && (
+                        <section className="space-y-4 border-t pt-8">
+                            <h2 className="headline text-4xl">Registro oficial</h2>
+                            <RegistrySection
+                                registry={registry}
+                                shopName={product.name}
+                                unit={product.unit}
+                                onUseDose={packAmount && product.price != null ? (dose) => setPreset({ ...dose, n: Date.now() }) : undefined}
+                            />
+                        </section>
+                    )}
+
+                    <section ref={calculatorRef} className="scroll-mt-20 space-y-4 border-t pt-8">
+                        <h2 className="headline text-4xl">Coste del tratamiento</h2>
+                        {packAmount && product.unit && product.price != null ? (
+                            <CostCalculator
+                                key={preset?.n ?? 0}
+                                product={{ ...product, unit: product.unit, price: product.price }}
+                                packAmount={packAmount}
+                                initialDose={preset ?? undefined}
+                            />
+                        ) : (
+                            <p className="max-w-[60ch] text-muted-foreground">
+                                La tienda no indica el tamaño del envase en el nombre del producto, así que no podemos calcular cuánto necesitas.
+                                Mira el formato en su web.
+                            </p>
+                        )}
+                    </section>
+
+                    <section className="space-y-4 border-t pt-8">
+                        <h2 className="headline text-4xl">Evolución del precio</h2>
+                        {history ? <PriceChart history={history} /> : <Skeleton className="h-[260px] w-full" />}
+                    </section>
+
+                    {alternatives && alternatives.length > 0 && (
+                        <section className="space-y-4 border-t pt-8">
+                            <div className="space-y-2">
+                                <h2 className="headline text-4xl">Alternativas</h2>
+                                <p className="max-w-[65ch] text-muted-foreground">
+                                    Productos que también contienen {listOr(product.active_ingredients)}. Compara el precio por litro o kilo,
+                                    pero ten en cuenta que la concentración y la dosis pueden ser distintas.
+                                </p>
+                            </div>
+                            <ul className="stagger divide-y overflow-hidden rounded-lg border bg-card">
+                                {alternatives.map((alt) => (
+                                    <li key={alt.id}>
+                                        <ProductRow
+                                            product={alt}
+                                            note={
+                                                product.unit && alt.unit === product.unit && alt.price_per_unit != null && product.price_per_unit != null
+                                                    ? <UnitComparison theirs={alt.price_per_unit} ours={product.price_per_unit} unit={product.unit} />
+                                                    : null
+                                            }
+                                        />
+                                    </li>
+                                ))}
+                            </ul>
+                        </section>
+                    )}
+                </>
+            )}
+        </AppShell>
+    );
 }

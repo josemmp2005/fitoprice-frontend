@@ -1,108 +1,110 @@
 /**
- * Login page for admin authentication 
+ * Login de administradores
  */
 
 import { useState } from "react";
-import { Button } from "../components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card"; // Card components
-import { Input } from "../components/ui/input"; // Input component
-import { Label } from "../components/ui/label"; // Label component
-import { useNavigate } from "react-router-dom";  // Navigation hook
-import { supabase } from "@/config/supabase"; // Supabase client
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import Logo from "@/components/Logo";
+import ThemeToggle from "@/components/ThemeToggle";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { login } from "@/config/auth";
 
 export default function Login() {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+    const navigate = useNavigate();
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState("");
 
-  // Handle login form submission
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMsg("");
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setErrorMsg("");
 
-    // Authenticate using Supabase auth
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+        try {
+            await login(email, password);
+            navigate("/admin/dashboard");
+        } catch (error) {
+            setErrorMsg(error instanceof Error ? error.message : "Error al iniciar sesión");
+            setLoading(false);
+        }
+    };
 
-    if (error) {
-      setErrorMsg("Credenciales incorrectas");
-      setLoading(false);
-      return;
-    }
+    return (
+        <div className="grid min-h-screen lg:grid-cols-2">
+            {/* Ruta oculta: que los buscadores no la indexen */}
+            <meta name="robots" content="noindex, nofollow" />
+            {/* Panel de marca (solo en pantallas grandes) */}
+            <aside className="hidden flex-col justify-between bg-primary p-10 text-primary-foreground lg:flex dark:bg-accent dark:text-accent-foreground">
+                <Logo />
+                <div className="max-w-md space-y-4">
+                    <p className="headline text-6xl">Panel de administración</p>
+                    <p className="text-lg opacity-85">
+                        Registra tiendas, ajusta qué se lee de cada web y revisa el catálogo.
+                    </p>
+                </div>
+            </aside>
 
-    // Redirect to admin dashboard on successful login
-    navigate("/admin/dashboard");
-  };
+            <main className="flex flex-col p-6 md:p-10">
+                <div className="flex items-center justify-between">
+                    <Button asChild variant="ghost" size="sm" className="-ml-2 text-muted-foreground">
+                        <Link to="/"><ArrowLeft /> Volver</Link>
+                    </Button>
+                    <ThemeToggle />
+                </div>
 
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Iniciar sesión</CardTitle>
-          <CardDescription>Solo para administradores</CardDescription>
-          <CardAction>
-            <Button variant="link" className="text-white" onClick={() => navigate("/")}>
-              Volver
-            </Button>
-          </CardAction>
-        </CardHeader>
+                <div className="flex flex-1 items-center justify-center py-10">
+                    <div className="w-full max-w-sm space-y-8">
+                        <div className="space-y-2">
+                            <Logo className="lg:hidden" />
+                            <h1 className="headline text-5xl">Iniciar sesión</h1>
+                            <p className="text-muted-foreground">Acceso solo para administradores.</p>
+                        </div>
 
-        <CardContent>
-          <form onSubmit={handleLogin}>
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="admin@fitoprice.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
+                        <form onSubmit={handleLogin} className="space-y-5">
+                            <div className="grid gap-2">
+                                <Label htmlFor="email">Email</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    autoComplete="username"
+                                    placeholder="admin@fitoprice.com"
+                                    className="h-10"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="password">Contraseña</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    autoComplete="current-password"
+                                    className="h-10"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                />
+                            </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
+                            {errorMsg && (
+                                <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                                    {errorMsg}
+                                </p>
+                            )}
 
-              {errorMsg && (
-                <p className="text-sm text-red-500 text-center">{errorMsg}</p>
-              )}
-            </div>
-
-            <CardFooter className="flex-col gap-2 mt-6">
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={loading}
-              >
-                {loading ? "Entrando..." : "Login"}
-              </Button>
-            </CardFooter>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
-  );
+                            <Button type="submit" size="lg" className="w-full" disabled={loading}>
+                                {loading && <Loader2 className="animate-spin" />}
+                                {loading ? "Entrando…" : "Entrar"}
+                            </Button>
+                        </form>
+                    </div>
+                </div>
+            </main>
+        </div>
+    );
 }
